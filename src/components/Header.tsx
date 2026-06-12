@@ -45,9 +45,7 @@ export function Header({ onSelectFileCategory, selectedCategory }: HeaderProps) 
     <header className="sticky top-0 z-50 glass border-b border-white/10 shadow-sm backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
-          <div className="p-1.5 rounded-xl bg-primary/5 border border-primary/10">
-            <img src="/logo.png" alt="Vault@Xis Logo" className="h-7 w-7 object-contain animate-pulse" />
-          </div>
+          <img src="/logo.png" alt="Vault@Xis Logo" className="h-7 w-7 object-contain" />
           <span className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-cyan-400">
             Vault@Xis
           </span>

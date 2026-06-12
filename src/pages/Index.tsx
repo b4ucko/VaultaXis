@@ -254,9 +254,7 @@ const Index = () => {
         {/* Page Title */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="p-2.5 rounded-2xl bg-primary/5 border border-primary/10 shadow-lg shadow-primary/5">
-              <img src="/logo.png" alt="Vault@Xis Logo" className="h-12 w-12 object-contain animate-pulse" />
-            </div>
+            <img src="/logo.png" alt="Vault@Xis Logo" className="h-12 w-12 object-contain" />
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-cyan-400 text-glow">
               Vault@Xis
             </h1>
