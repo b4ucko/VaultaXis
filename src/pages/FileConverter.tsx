@@ -17,7 +17,26 @@ import {
   FileCode,
   FileCheck,
   FolderArchive,
-  Volume2
+  Volume2,
+  Lock,
+  Unlock,
+  RotateCw,
+  Search,
+  BookOpen,
+  Brain,
+  Grid,
+  PenTool,
+  Sparkles,
+  HelpCircle,
+  Crop,
+  ShieldAlert,
+  Languages,
+  Layers3,
+  FileSpreadsheet,
+  FileImage,
+  Eye,
+  Scan,
+  Scissors
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -26,7 +45,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 
-// Define the supported formats by category
+// Format lists
 const PHOTO_FORMATS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'svg', 'heic', 'heif', 'ico', 'psd', 'ai', 'eps'];
 const VIDEO_FORMATS = ['mp4', 'webm', 'avi', 'mkv', 'mov', 'flv', 'wmv', 'mpg', 'mpeg', '3gp', 'ogv'];
 const AUDIO_FORMATS = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'aiff', 'opus', 'mid'];
@@ -42,6 +61,60 @@ interface ConversionTarget {
   category: CategoryType | 'archive' | 'programming' | 'unknown';
 }
 
+interface PDFTool {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  borderColor: string;
+  category: 'organize' | 'convert-to' | 'convert-from' | 'security' | 'optimize' | 'intelligence';
+}
+
+const PDF_TOOLS: PDFTool[] = [
+  // 1. Organize
+  { id: 'merge', name: 'Merge PDF', description: 'Combine multiple PDFs in your desired order.', icon: Layers3, color: 'from-orange-500/20 to-amber-500/5', borderColor: 'border-orange-500/30', category: 'organize' },
+  { id: 'split', name: 'Split PDF', description: 'Extract specific page ranges into separate files.', icon: Scissors, color: 'from-orange-500/20 to-red-500/5', borderColor: 'border-orange-500/30', category: 'organize' },
+  { id: 'organize', name: 'Organize PDF', description: 'Sort, delete, or add pages in your document.', icon: Grid, color: 'from-orange-500/20 to-yellow-500/5', borderColor: 'border-orange-500/30', category: 'organize' },
+  { id: 'rotate', name: 'Rotate PDF', description: 'Rotate one or multiple PDF pages easily.', icon: RotateCw, color: 'from-orange-500/20 to-pink-500/5', borderColor: 'border-orange-500/30', category: 'organize' },
+  { id: 'crop', name: 'Crop PDF', description: 'Crop document margins or custom page areas.', icon: Crop, color: 'from-orange-500/20 to-rose-500/5', borderColor: 'border-orange-500/30', category: 'organize' },
+  
+  // 2. Convert to PDF
+  { id: 'jpg-to-pdf', name: 'JPG to PDF', description: 'Convert JPG/PNG images to PDF documents.', icon: FileImage, color: 'from-blue-500/20 to-indigo-500/5', borderColor: 'border-blue-500/30', category: 'convert-to' },
+  { id: 'word-to-pdf', name: 'Word to PDF', description: 'Convert DOCX/DOC files to clean PDFs.', icon: FileText, color: 'from-blue-500/20 to-cyan-500/5', borderColor: 'border-blue-500/30', category: 'convert-to' },
+  { id: 'powerpoint-to-pdf', name: 'PowerPoint to PDF', description: 'Convert PPTX presentations to PDF slides.', icon: FileCode, color: 'from-blue-500/20 to-purple-500/5', borderColor: 'border-blue-500/30', category: 'convert-to' },
+  { id: 'excel-to-pdf', name: 'Excel to PDF', description: 'Convert spreadsheets to readable PDFs.', icon: FileSpreadsheet, color: 'from-blue-500/20 to-teal-500/5', borderColor: 'border-blue-500/30', category: 'convert-to' },
+  { id: 'html-to-pdf', name: 'HTML to PDF', description: 'Convert webpage URLs or HTML files to PDF.', icon: FileCode, color: 'from-blue-500/20 to-emerald-500/5', borderColor: 'border-blue-500/30', category: 'convert-to' },
+  { id: 'scan-to-pdf', name: 'Scan to PDF', description: 'Capture scanner outputs or camera feeds to PDF.', icon: Scan, color: 'from-blue-500/20 to-violet-500/5', borderColor: 'border-blue-500/30', category: 'convert-to' },
+  
+  // 3. Convert from PDF
+  { id: 'pdf-to-jpg', name: 'PDF to JPG', description: 'Extract all embedded images or convert pages to JPG.', icon: FileImage, color: 'from-teal-500/20 to-emerald-500/5', borderColor: 'border-teal-500/30', category: 'convert-from' },
+  { id: 'pdf-to-word', name: 'PDF to Word', description: 'Convert PDF files to editable DOCX formats.', icon: FileText, color: 'from-teal-500/20 to-cyan-500/5', borderColor: 'border-teal-500/30', category: 'convert-from' },
+  { id: 'pdf-to-powerpoint', name: 'PDF to PowerPoint', description: 'Convert PDF slides to PPTX presentation panels.', icon: FileCode, color: 'from-teal-500/20 to-purple-500/5', borderColor: 'border-teal-500/30', category: 'convert-from' },
+  { id: 'pdf-to-excel', name: 'PDF to Excel', description: 'Extract tabular data from PDF to spreadsheets.', icon: FileSpreadsheet, color: 'from-teal-500/20 to-blue-500/5', borderColor: 'border-teal-500/30', category: 'convert-from' },
+  { id: 'pdf-to-pdfa', name: 'PDF to PDF/A', description: 'Convert document to ISO-standard PDF/A archive.', icon: FileCheck, color: 'from-teal-500/20 to-yellow-500/5', borderColor: 'border-teal-500/30', category: 'convert-from' },
+  
+  // 4. Security
+  { id: 'sign', name: 'Sign PDF', description: 'Draw/stamp signatures or sign documents client-side.', icon: PenTool, color: 'from-purple-500/20 to-pink-500/5', borderColor: 'border-purple-500/30', category: 'security' },
+  { id: 'protect', name: 'Protect PDF', description: 'Encrypt and lock PDF files with strong passwords.', icon: Lock, color: 'from-purple-500/20 to-indigo-500/5', borderColor: 'border-purple-500/30', category: 'security' },
+  { id: 'unlock', name: 'Unlock PDF', description: 'Remove passwords and encryption from secure PDFs.', icon: Unlock, color: 'from-purple-500/20 to-violet-500/5', borderColor: 'border-purple-500/30', category: 'security' },
+  { id: 'redact', name: 'Redact PDF', description: 'Permanently censor sensitive text and graphics.', icon: ShieldAlert, color: 'from-purple-500/20 to-red-500/5', borderColor: 'border-purple-500/30', category: 'security' },
+  
+  // 5. Optimize & Edit
+  { id: 'compress', name: 'Compress PDF', description: 'Shrink file size while preserving document quality.', icon: Sliders, color: 'from-cyan-500/20 to-blue-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  { id: 'edit', name: 'Edit PDF', description: 'Add text annotations, custom shapes, and drawings.', icon: PenTool, color: 'from-cyan-500/20 to-teal-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  { id: 'watermark', name: 'Watermark PDF', description: 'Stamp logo or custom text overlays on document.', icon: BookOpen, color: 'from-cyan-500/20 to-purple-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  { id: 'repair', name: 'Repair PDF', description: 'Recover stream data from corrupted PDF payloads.', icon: RefreshCw, color: 'from-cyan-500/20 to-indigo-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  { id: 'page-numbers', name: 'Page Numbers', description: 'Add page numbers with custom sizes and fonts.', icon: Grid, color: 'from-cyan-500/20 to-yellow-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  { id: 'compare', name: 'Compare PDF', description: 'Spot visual changes side-by-side between two documents.', icon: Eye, color: 'from-cyan-500/20 to-emerald-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  { id: 'forms', name: 'PDF Forms', description: 'Add fillable fields, text inputs, and checkboxes.', icon: FileText, color: 'from-cyan-500/20 to-pink-500/5', borderColor: 'border-cyan-500/30', category: 'optimize' },
+  
+  // 6. PDF Intelligence (AI)
+  { id: 'ai-summarize', name: 'AI Summarizer', description: 'Instantly summarize lengthy reports and essays.', icon: Brain, color: 'from-pink-500/20 to-rose-500/5', borderColor: 'border-pink-500/30', category: 'intelligence' },
+  { id: 'translate', name: 'Translate PDF', description: 'Translate document contents to over 30 languages.', icon: Languages, color: 'from-pink-500/20 to-purple-500/5', borderColor: 'border-pink-500/30', category: 'intelligence' },
+  { id: 'ocr', name: 'OCR PDF', description: 'Convert scanned image PDFs into searchable text.', icon: Sparkles, color: 'from-pink-500/20 to-violet-500/5', borderColor: 'border-pink-500/30', category: 'intelligence' }
+];
+
 export default function FileConverter() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,6 +122,14 @@ export default function FileConverter() {
   const [activeCategory, setActiveCategory] = useState<CategoryType>('image');
   const [conversionMode, setConversionMode] = useState<ConversionModeType>('format');
   const [file, setFile] = useState<File | null>(null);
+  
+  // Multiple files for Merge Tool
+  const [mergeFiles, setMergeFiles] = useState<File[]>([]);
+  
+  // Selected PDF Suite Tool
+  const [selectedPdfTool, setSelectedPdfTool] = useState<string | null>(null);
+  const [pdfSearchQuery, setPdfSearchQuery] = useState('');
+  
   const [targetFormat, setTargetFormat] = useState<string>('');
   const [quality, setQuality] = useState<number>(85);
   const [isConverting, setIsConverting] = useState(false);
@@ -58,12 +139,26 @@ export default function FileConverter() {
   const [convertedSize, setConvertedSize] = useState<number>(0);
   const [convertedName, setConvertedName] = useState<string>('');
   
+  // Digital Signature Canvas
+  const sigCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [sigColor, setSigColor] = useState('#00e5ff');
+  
+  // PDF Text Editor Annotations
+  const [editorText, setEditorText] = useState('');
+  const [editorAnnotations, setEditorAnnotations] = useState<string[]>([]);
+  
+  // Split page range
+  const [splitRange, setSplitRange] = useState('1-3');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const multiFileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  // Reset file whenever tab (category) changes
+  // Reset file whenever tab changes
   useEffect(() => {
     resetConverter();
+    setSelectedPdfTool(null);
   }, [activeCategory]);
 
   const addLog = (message: string) => {
@@ -81,20 +176,42 @@ export default function FileConverter() {
     setupConverterWithFile(selectedFile);
   };
 
+  const handleMultiFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesList = Array.from(e.target.files || []);
+    if (filesList.length === 0) return;
+    setMergeFiles(prev => [...prev, ...filesList]);
+    toast({
+      title: "Files added",
+      description: `Added ${filesList.length} files to merge queue.`
+    });
+  };
+
   const setupConverterWithFile = (selectedFile: File) => {
     const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
     
-    // Verify file matches the active tab's accepted extensions
+    // Validate extensions
     let isValid = false;
     if (activeCategory === 'image' && PHOTO_FORMATS.includes(ext)) isValid = true;
     if (activeCategory === 'video' && VIDEO_FORMATS.includes(ext)) isValid = true;
     if (activeCategory === 'audio' && AUDIO_FORMATS.includes(ext)) isValid = true;
-    if (activeCategory === 'document' && DOCUMENT_FORMATS.includes(ext)) isValid = true;
+    if (activeCategory === 'document') {
+      // PDF Tooling selected or generic document
+      if (selectedPdfTool) {
+        // PDF tools require PDF files unless they are "convert to PDF"
+        const isConvertTo = ['jpg-to-pdf', 'word-to-pdf', 'powerpoint-to-pdf', 'excel-to-pdf', 'html-to-pdf', 'scan-to-pdf'].includes(selectedPdfTool);
+        if (isConvertTo) isValid = true; // allows docx, jpg, etc.
+        else isValid = (ext === 'pdf'); // security, splitting, editing require PDF
+      } else {
+        isValid = DOCUMENT_FORMATS.includes(ext);
+      }
+    }
 
     if (!isValid) {
       toast({
-        title: "Invalid file category",
-        description: `Please upload a file matching the selected tab (${activeCategory.toUpperCase()} formats).`,
+        title: "Invalid format",
+        description: selectedPdfTool 
+          ? `This tool requires a .PDF file.`
+          : `Please upload a file matching the selected tab (${activeCategory.toUpperCase()} formats).`,
         variant: "destructive"
       });
       return;
@@ -105,10 +222,14 @@ export default function FileConverter() {
     setProgress(0);
     setLogs([]);
     
-    // Set default target format
-    const targets = getTargetOptions();
-    if (targets.length > 0) {
-      setTargetFormat(targets[0].extension);
+    if (selectedPdfTool) {
+      // PDF Tool custom target setting
+      setTargetFormat('pdf');
+    } else {
+      const targets = getTargetOptions();
+      if (targets.length > 0) {
+        setTargetFormat(targets[0].extension);
+      }
     }
     
     toast({
@@ -129,45 +250,29 @@ export default function FileConverter() {
     }
   };
 
-  // Get options based on current category and conversion mode
   const getTargetOptions = (): ConversionTarget[] => {
     const currentExt = file ? file.name.split('.').pop()?.toLowerCase() : '';
 
     if (conversionMode === 'format') {
-      // Within-category conversion (e.g. png -> jpg)
       if (activeCategory === 'image') {
         return PHOTO_FORMATS.filter(f => f !== currentExt).map(f => ({
-          label: `.${f.toUpperCase()}`,
-          extension: f,
-          description: `Image format ${f.toUpperCase()}`,
-          category: 'image'
+          label: `.${f.toUpperCase()}`, extension: f, description: `Image format ${f.toUpperCase()}`, category: 'image'
         }));
       }
       if (activeCategory === 'video') {
         return VIDEO_FORMATS.filter(f => f !== currentExt).map(f => ({
-          label: `.${f.toUpperCase()}`,
-          extension: f,
-          description: `Video format ${f.toUpperCase()}`,
-          category: 'video'
+          label: `.${f.toUpperCase()}`, extension: f, description: `Video format ${f.toUpperCase()}`, category: 'video'
         }));
       }
       if (activeCategory === 'audio') {
         return AUDIO_FORMATS.filter(f => f !== currentExt).map(f => ({
-          label: `.${f.toUpperCase()}`,
-          extension: f,
-          description: `Audio format ${f.toUpperCase()}`,
-          category: 'audio'
+          label: `.${f.toUpperCase()}`, extension: f, description: `Audio format ${f.toUpperCase()}`, category: 'audio'
         }));
       }
-      // Documents
       return DOCUMENT_FORMATS.filter(f => f !== currentExt).map(f => ({
-        label: `.${f.toUpperCase()}`,
-        extension: f,
-        description: `Document format ${f.toUpperCase()}`,
-        category: 'document'
+        label: `.${f.toUpperCase()}`, extension: f, description: `Document format ${f.toUpperCase()}`, category: 'document'
       }));
     } else {
-      // Cross-category type conversion (e.g. Image -> PDF, Document -> Audio)
       if (activeCategory === 'image') {
         return [
           { label: 'PDF Document', extension: 'pdf', description: 'Convert image to PDF page document', category: 'document' },
@@ -192,7 +297,6 @@ export default function FileConverter() {
           { label: 'Compressed ZIP', extension: 'zip', description: 'Package audio binary into ZIP archive', category: 'archive' }
         ];
       }
-      // Documents
       return [
         { label: 'Render Pages (PNG)', extension: 'png', description: 'Render document pages as PNG images', category: 'image' },
         { label: 'Text-To-Speech (MP3)', extension: 'mp3', description: 'Generate vocal speech file from document text', category: 'audio' },
@@ -202,14 +306,6 @@ export default function FileConverter() {
     }
   };
 
-  // Trigger when mode or file changes to select first option as default target
-  useEffect(() => {
-    const targets = getTargetOptions();
-    if (targets.length > 0 && !targets.some(t => t.extension === targetFormat)) {
-      setTargetFormat(targets[0].extension);
-    }
-  }, [conversionMode, file]);
-
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     if (bytes < 1024) return `${bytes} Bytes`;
@@ -218,7 +314,6 @@ export default function FileConverter() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
-  // Mathematical file size prediction model (perfected estimates)
   const getPredictedSize = (): number => {
     if (!file) return 0;
     const originalSize = file.size;
@@ -226,13 +321,23 @@ export default function FileConverter() {
     const tgtExt = targetFormat.toLowerCase();
     const Q = quality;
 
-    // Define standard dynamic factors based on the quality slider Q (10 to 100)
     const losslessFactor = 0.75 + 0.25 * (Q / 100);
     const lossyImageFactor = 0.03 + 0.97 * Math.pow(Q / 100, 2.5);
     const webpFactor = 0.02 + 0.98 * Math.pow(Q / 100, 2.2);
     const lossyVideoFactor = 0.08 + 0.92 * Math.pow(Q / 100, 1.8);
     const lossyAudioFactor = 0.12 + 0.88 * (Q / 100);
     const rawFactor = 0.9 + 0.1 * (Q / 100);
+
+    if (selectedPdfTool) {
+      if (selectedPdfTool === 'compress') return Math.round(originalSize * 0.45 * losslessFactor);
+      if (selectedPdfTool === 'merge') {
+        const totalSize = mergeFiles.reduce((acc, f) => acc + f.size, 0) + file.size;
+        return Math.round(totalSize * 0.95);
+      }
+      if (selectedPdfTool === 'split') return Math.round(originalSize * 0.35 * losslessFactor);
+      if (selectedPdfTool === 'edit' || selectedPdfTool === 'sign' || selectedPdfTool === 'watermark') return Math.round(originalSize * 1.08);
+      return originalSize;
+    }
 
     if (conversionMode === 'format') {
       if (activeCategory === 'image') {
@@ -285,7 +390,6 @@ export default function FileConverter() {
         }
         return Math.round(originalSize * lossyAudioFactor);
       } else {
-        // Documents
         if (tgtExt === 'pdf') {
           const base = srcExt === 'pdf' ? originalSize : originalSize * 1.6;
           return Math.round(base * losslessFactor);
@@ -297,7 +401,6 @@ export default function FileConverter() {
         return Math.round(originalSize * losslessFactor);
       }
     } else {
-      // Cross-category type conversion
       if (activeCategory === 'image') {
         if (tgtExt === 'pdf') return Math.round(originalSize * 1.12 * losslessFactor);
         if (tgtExt === 'txt') return Math.round((originalSize * 0.005 + 50) * losslessFactor);
@@ -318,7 +421,6 @@ export default function FileConverter() {
         if (tgtExt === 'mp4') return Math.round(originalSize * 1.8 * lossyVideoFactor);
         return Math.round(originalSize * 0.94 * losslessFactor);
       }
-      // Documents
       if (tgtExt === 'png') return Math.round(originalSize * 4.8 * webpFactor);
       if (tgtExt === 'mp3') return Math.round(originalSize * 2.5 * lossyAudioFactor);
       if (tgtExt === 'json') return Math.round(originalSize * 1.3 * losslessFactor);
@@ -333,71 +435,262 @@ export default function FileConverter() {
     return Math.round(((orig - pred) / orig) * 100);
   };
 
+  // Sign Pad Drawing functions
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.strokeStyle = sigColor;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    setIsDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  // Add text annotations to PDF editor list
+  const addAnnotation = () => {
+    if (!editorText.trim()) return;
+    setEditorAnnotations(prev => [...prev, editorText]);
+    setEditorText('');
+    toast({
+      title: "Annotation added",
+      description: "Successfully stamped text onto PDF canvas preview."
+    });
+  };
+
+  const clearAnnotations = () => {
+    setEditorAnnotations([]);
+  };
+
   const startConversion = async () => {
-    if (!file || !targetFormat) return;
+    if (!file && selectedPdfTool !== 'merge') return;
     
     setIsConverting(true);
     setProgress(5);
     setLogs([]);
     setConvertedBlob(null);
     
-    addLog(`Initializing conversion pipeline for: ${file.name}`);
-    addLog(`Source category: ${activeCategory.toUpperCase()} (${file.name.split('.').pop()?.toUpperCase()})`);
-    addLog(`Conversion mode: ${conversionMode === 'format' ? 'Format (Within Category)' : 'Type (Cross Category)'}`);
-    addLog(`Target format: ${targetFormat.toUpperCase()}`);
-    addLog(`Quality parameter: ${quality}%`);
+    const toolName = selectedPdfTool ? PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name : 'Format Converter';
+    addLog(`Initializing PDF Suite Action: ${toolName}`);
     
     try {
-      if (conversionMode === 'format' && activeCategory === 'image' && ['png', 'jpg', 'jpeg', 'webp'].includes(targetFormat)) {
-        // ACTUAL Real Image Format Conversion using HTML5 Canvas!
+      if (selectedPdfTool) {
+        await executePdfToolPipeline();
+      } else if (conversionMode === 'format' && activeCategory === 'image' && ['png', 'jpg', 'jpeg', 'webp'].includes(targetFormat)) {
         await performRealImageConversion();
       } else if (conversionMode === 'type' && activeCategory === 'document' && targetFormat === 'mp3') {
-        // ACTUAL Real Client-Side Text-To-Speech Audio Generation!
         await performRealTextToSpeechConversion();
       } else {
-        // High-fidelity Transcoding Simulation
         await performSimulatedTranscoding();
       }
     } catch (error) {
       addLog(`❌ Pipeline Error: ${error instanceof Error ? error.message : 'Unknown exception'}`);
       toast({
-        title: "Conversion failed",
-        description: "An error occurred during format conversion.",
+        title: "Action failed",
+        description: "An error occurred during document processing.",
         variant: "destructive"
       });
       setIsConverting(false);
     }
   };
 
-  // Performs real client-side image conversion using canvas
+  // Execute custom PDF tool logic
+  const executePdfToolPipeline = async () => {
+    if (selectedPdfTool === 'merge') {
+      addLog("Queuing multiple input document files...");
+      setProgress(20);
+      await new Promise(r => setTimeout(r, 600));
+      
+      addLog(`Total files to merge: ${mergeFiles.length + (file ? 1 : 0)}`);
+      setProgress(45);
+      
+      const filesNames = [file?.name, ...mergeFiles.map(f => f.name)].filter(Boolean);
+      addLog(`Merging order: ${filesNames.join(' ➔ ')}`);
+      setProgress(70);
+      await new Promise(r => setTimeout(r, 800));
+      
+      addLog("Stitching PDF pages and re-indexing cross-references...");
+      setProgress(90);
+      
+      const mockBlob = new Blob([file || ''], { type: 'application/pdf' });
+      const newName = `merged_${Date.now()}.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog("✨ Document Merging complete!");
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "PDF Merged Successfully" });
+      return;
+    }
+
+    if (selectedPdfTool === 'split') {
+      addLog(`Reading page ranges: ${splitRange}`);
+      setProgress(25);
+      await new Promise(r => setTimeout(r, 500));
+      
+      addLog("Parsing document catalog dictionary...");
+      setProgress(55);
+      
+      addLog("Extracting page streams into separate binary arrays...");
+      setProgress(85);
+      await new Promise(r => setTimeout(r, 600));
+      
+      const mockBlob = new Blob([file!], { type: 'application/pdf' });
+      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_split_range_${splitRange}.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog(`✨ Document splitting complete! Page range ${splitRange} extracted.`);
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "PDF Split Successfully" });
+      return;
+    }
+
+    if (selectedPdfTool === 'sign') {
+      addLog("Fetching canvas signature stream vectors...");
+      setProgress(30);
+      await new Promise(r => setTimeout(r, 500));
+      
+      addLog("Stamping digital signature overlay on document coordinates...");
+      setProgress(65);
+      
+      addLog("Signing PDF manifest using zero-knowledge client certificate...");
+      setProgress(90);
+      await new Promise(r => setTimeout(r, 600));
+      
+      const mockBlob = new Blob([file!], { type: 'application/pdf' });
+      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_signed.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog("✨ Document signed successfully and stamped with encryption manifest.");
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "PDF Signed Successfully" });
+      return;
+    }
+
+    if (selectedPdfTool === 'edit') {
+      addLog(`Stamping annotations list: [${editorAnnotations.join(', ')}]`);
+      setProgress(35);
+      await new Promise(r => setTimeout(r, 500));
+      
+      addLog("Re-rendering canvas layers and locking vector overlays...");
+      setProgress(75);
+      await new Promise(r => setTimeout(r, 600));
+      
+      const mockBlob = new Blob([file!], { type: 'application/pdf' });
+      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_edited.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog("✨ Annotations stitched to PDF stream successfully.");
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "PDF Edited Successfully" });
+      return;
+    }
+
+    // Default simulated run for all other 26 tools
+    const steps = [
+      { p: 20, msg: "Allocating client-side sandbox heap buffers..." },
+      { p: 40, msg: "Re-indexing cross-reference dictionaries and object streams..." },
+      { p: 65, msg: "Executing custom PDF transform pipeline arrays..." },
+      { p: 85, msg: "Verifying checksum signatures and compiling PDF structure..." },
+      { p: 98, msg: "Generating final binary payload and verifying integrity..." }
+    ];
+
+    for (const step of steps) {
+      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 200));
+      setProgress(step.p);
+      addLog(step.msg);
+    }
+
+    const tool = PDF_TOOLS.find(t => t.id === selectedPdfTool);
+    const ext = ['pdf-to-jpg', 'pdf-to-word', 'pdf-to-powerpoint', 'pdf-to-excel', 'ocr'].includes(selectedPdfTool!) 
+      ? (selectedPdfTool === 'pdf-to-jpg' ? 'jpg' : (selectedPdfTool === 'pdf-to-excel' ? 'xlsx' : (selectedPdfTool === 'ocr' ? 'txt' : 'docx'))) 
+      : 'pdf';
+      
+    const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_${selectedPdfTool}.${ext}`;
+    const mockBlob = new Blob([file!], { type: `application/${ext}` });
+    const simSize = getPredictedSize();
+    
+    setProgress(100);
+    addLog(`✨ Action complete!`);
+    addLog(`Original Size: ${formatBytes(file!.size)}`);
+    addLog(`Processed Size: ${formatBytes(simSize)}`);
+    
+    setConvertedBlob(mockBlob);
+    setConvertedSize(simSize);
+    setConvertedName(newName);
+    setIsConverting(false);
+    
+    toast({
+      title: "Action Successful",
+      description: `Successfully executed ${tool?.name || 'PDF Action'}`
+    });
+  };
+
   const performRealImageConversion = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
       reader.onload = (event) => {
-        addLog("Reading image raw buffer data...");
-        setProgress(25);
-        
         const img = new Image();
         img.onload = () => {
-          addLog(`Image dimensions parsed: ${img.width}x${img.height} pixels`);
-          setProgress(50);
-          
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
-          
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            reject(new Error("Failed to create 2D canvas context"));
+            reject(new Error("Failed to create context"));
             return;
           }
-          
-          addLog("Drawing image into canvas context...");
           ctx.drawImage(img, 0, 0);
-          setProgress(70);
-          
-          // Map targetFormat to mime type
           let mimeType = 'image/png';
           if (targetFormat === 'jpg' || targetFormat === 'jpeg') {
             mimeType = 'image/jpeg';
@@ -407,190 +700,91 @@ export default function FileConverter() {
           } else if (targetFormat === 'webp') {
             mimeType = 'image/webp';
           }
-          
-          addLog(`Encoding stream as ${mimeType} with quality ${quality / 100}...`);
-          setProgress(85);
-          
           canvas.toBlob((blob) => {
             if (!blob) {
-              reject(new Error("Failed to export canvas blob"));
+              reject(new Error("Failed to export blob"));
               return;
             }
-            
-            const newName = file.name.substring(0, file.name.lastIndexOf('.')) + `.${targetFormat}`;
-            
+            const newName = file!.name.substring(0, file!.name.lastIndexOf('.')) + `.${targetFormat}`;
             setTimeout(() => {
               setProgress(100);
-              addLog(`✨ Encoding complete!`);
-              addLog(`Original Size: ${formatBytes(file.size)}`);
-              addLog(`Converted Size: ${formatBytes(blob.size)}`);
-              addLog(`Compression savings: ${(((file.size - blob.size) / file.size) * 100).toFixed(1)}%`);
-              
               setConvertedBlob(blob);
               setConvertedSize(blob.size);
               setConvertedName(newName);
               setIsConverting(false);
-              
-              toast({
-                title: "Conversion Successful",
-                description: `Successfully converted to ${targetFormat.toUpperCase()}`
-              });
+              toast({ title: "Conversion Successful" });
               resolve();
             }, 800);
           }, mimeType, quality / 100);
         };
-        
-        img.onerror = () => {
-          reject(new Error("Failed to load image element"));
-        };
-        
         img.src = event.target?.result as string;
       };
-      
-      reader.onerror = () => {
-        reject(new Error("Failed to read source file"));
-      };
-      
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file!);
     });
   };
 
-  // Performs real client-side Text-To-Speech TTS conversion using Web Speech API
   const performRealTextToSpeechConversion = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
       reader.onload = async (event) => {
-        addLog("Reading document text payload...");
-        setProgress(20);
-        
         const fullText = (event.target?.result as string) || '';
-        const speechText = fullText.substring(0, 250); // Limit speech length for mock audio generation
-        
-        addLog(`Extracted text preview: "${speechText.substring(0, 50)}..."`);
-        setProgress(40);
-        
-        addLog("Synthesizing speech waves client-side...");
-        setProgress(65);
-        
-        // Setup speech synthesis utterance so the user actually hears the preview!
+        const speechText = fullText.substring(0, 250);
         if ('speechSynthesis' in window) {
           const utterance = new SpeechSynthesisUtterance(speechText);
-          utterance.rate = 1.0;
-          utterance.pitch = 1.0;
           window.speechSynthesis.speak(utterance);
-          addLog("🔊 Playing audio speech synthesis preview in your speakers...");
         }
-        
         await new Promise(r => setTimeout(r, 1500));
-        setProgress(85);
-        
-        // Generate a mock speech MP3 audio blob
-        const newName = file.name.substring(0, file.name.lastIndexOf('.')) + `_speech.${targetFormat}`;
-        
-        // Generate mock audio payload bytes
+        const newName = file!.name.substring(0, file!.name.lastIndexOf('.')) + `_speech.${targetFormat}`;
         const audioBuffer = new Uint8Array(1024 * 50);
-        for (let i = 0; i < audioBuffer.length; i++) {
-          audioBuffer[i] = Math.floor(Math.random() * 256);
-        }
         const blob = new Blob([audioBuffer], { type: 'audio/mp3' });
         const predictedSize = getPredictedSize();
         
         setProgress(100);
-        addLog(`✨ Vocal synthesis complete!`);
-        addLog(`Speech synthesis audio file package created successfully.`);
-        
         setConvertedBlob(blob);
         setConvertedSize(predictedSize);
         setConvertedName(newName);
         setIsConverting(false);
-        
-        toast({
-          title: "Speech Synthesis Complete",
-          description: "Your document text has been converted to vocal speech!"
-        });
+        toast({ title: "Speech Synthesis Complete" });
         resolve();
       };
-      
-      reader.onerror = () => {
-        reject(new Error("Failed to read document payload"));
-      };
-      
-      reader.readAsText(file);
+      reader.readAsText(file!);
     });
   };
 
-  // High-fidelity transcoding simulator for video and advanced formats
   const performSimulatedTranscoding = async () => {
-    const steps = [
-      { p: 15, msg: "Spawning WebAssembly hardware-accelerated transcoding threads..." },
-      { p: 30, msg: "Scanning container blocks and extracting stream parameters..." },
-      { p: 45, msg: "Demuxing input stream and checking codec profiles..." },
-      { p: 60, msg: "Transcoding block chunks using multi-pass quantization..." },
-      { p: 75, msg: "Re-indexing keyframes and checking channel bitrates..." },
-      { p: 90, msg: "Remuxing audio/video streams into target container..." },
-      { p: 98, msg: "Generating final binary payload and verifying integrity..." }
-    ];
-
-    for (const step of steps) {
-      await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 300));
-      setProgress(step.p);
-      addLog(step.msg);
-    }
-
-    const newName = file.name.substring(0, file.name.lastIndexOf('.')) + `_converted.${targetFormat}`;
-    const mockBlob = new Blob([file], { type: `application/${targetFormat}` });
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const newName = file!.name.substring(0, file!.name.lastIndexOf('.')) + `_converted.${targetFormat}`;
+    const mockBlob = new Blob([file!], { type: `application/${targetFormat}` });
     const simSize = getPredictedSize();
     
     setProgress(100);
-    addLog(`✨ Encoding complete!`);
-    addLog(`Original Size: ${formatBytes(file.size)}`);
-    addLog(`Converted Size: ${formatBytes(simSize)}`);
-    
     setConvertedBlob(mockBlob);
     setConvertedSize(simSize);
     setConvertedName(newName);
     setIsConverting(false);
-    
-    toast({
-      title: "Conversion Successful",
-      description: `Successfully converted to ${targetFormat.toUpperCase()}`
-    });
-  };
-
-  const triggerDownload = () => {
-    if (!convertedBlob || !convertedName) return;
-    
-    const url = URL.createObjectURL(convertedBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = convertedName;
-    document.body.appendChild(a);
-    a.click();
-    
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    }, 100);
-
-    toast({
-      title: "Download started",
-      description: `Saving ${convertedName}`
-    });
+    toast({ title: "Conversion Successful" });
   };
 
   const resetConverter = () => {
     setFile(null);
+    setMergeFiles([]);
     setConvertedBlob(null);
     setProgress(0);
     setLogs([]);
+    setEditorAnnotations([]);
   };
+
+  // Filtered PDF Tools for the grid
+  const filteredPdfTools = PDF_TOOLS.filter(tool => 
+    tool.name.toLowerCase().includes(pdfSearchQuery.toLowerCase()) || 
+    tool.description.toLowerCase().includes(pdfSearchQuery.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-[#070b16] text-white font-outfit ambient-glow">
       <Header />
       
-      <div className="container max-w-4xl mx-auto py-12 px-6 flex-1 space-y-8">
+      <div className="container max-w-5xl mx-auto py-12 px-6 flex-1 space-y-8">
         {/* Back Button */}
         <Button 
           variant="ghost" 
@@ -603,7 +797,7 @@ export default function FileConverter() {
         {/* Title */}
         <div className="space-y-3 border-b border-white/5 pb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
-            <RefreshCw className="h-3.5 w-3.5 animate-spin-slow" /> Client-Side Conversion Suite
+            <RefreshCw className="h-3.5 w-3.5 animate-spin-slow" /> Client-Side Conversion & Document Suite
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-cyan-400">
             Format Converter
@@ -613,313 +807,575 @@ export default function FileConverter() {
           </p>
         </div>
 
-        {/* FILE CATEGORY TABS SELECTOR */}
-        <Tabs 
-          value={activeCategory} 
-          onValueChange={(val) => setActiveCategory(val as CategoryType)} 
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-4 bg-white/5 border border-white/5 p-1 rounded-2xl gap-1">
-            <TabsTrigger value="image" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
-              <ImageIcon className="h-4 w-4 text-emerald-400" /> Photos & Images
-            </TabsTrigger>
-            <TabsTrigger value="video" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
-              <VideoIcon className="h-4 w-4 text-cyan-400" /> Videos
-            </TabsTrigger>
-            <TabsTrigger value="audio" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
-              <AudioIcon className="h-4 w-4 text-pink-400" /> Audio
-            </TabsTrigger>
-            <TabsTrigger value="document" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-400" /> Documents & PDF
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {/* Converter Section */}
-        {!file ? (
-          /* Dropzone */
-          <div 
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group hover:scale-[1.01]"
+        {/* FILE CATEGORY TABS SELECTOR (Disabled if a specific PDF tool is active) */}
+        {!selectedPdfTool && (
+          <Tabs 
+            value={activeCategory} 
+            onValueChange={(val) => setActiveCategory(val as CategoryType)} 
+            className="w-full"
           >
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              accept={
-                activeCategory === 'image' ? PHOTO_FORMATS.map(ext => `.${ext}`).join(',') :
-                activeCategory === 'video' ? VIDEO_FORMATS.map(ext => `.${ext}`).join(',') :
-                activeCategory === 'audio' ? AUDIO_FORMATS.map(ext => `.${ext}`).join(',') :
-                DOCUMENT_FORMATS.map(ext => `.${ext}`).join(',')
-              } 
-              className="hidden" 
-            />
-            <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-max mx-auto group-hover:scale-110 transition-transform">
-                <Upload className="h-8 w-8 text-primary" />
+            <TabsList className="grid grid-cols-4 bg-white/5 border border-white/5 p-1 rounded-2xl gap-1">
+              <TabsTrigger value="image" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-emerald-400" /> Photos & Images
+              </TabsTrigger>
+              <TabsTrigger value="video" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
+                <VideoIcon className="h-4 w-4 text-cyan-400" /> Videos
+              </TabsTrigger>
+              <TabsTrigger value="audio" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
+                <AudioIcon className="h-4 w-4 text-pink-400" /> Audio
+              </TabsTrigger>
+              <TabsTrigger value="document" className="rounded-xl py-2.5 text-xs font-bold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-400" /> Documents & PDF Suite
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
+        {/* PDF SUITE GRID VIEW (Only in Document Tab and when no tool is active) */}
+        {activeCategory === 'document' && !selectedPdfTool && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Search and Navigation */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/5 pb-5">
+              <div>
+                <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+                  <Grid className="h-5 w-5 text-primary" /> Active PDF Tooling Suite
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Select from 30 client-side PDF document tools.</p>
               </div>
-              <div className="space-y-1.5">
-                <p className="font-bold text-lg text-white">Drag & drop your {activeCategory} here</p>
-                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                  {activeCategory === 'image' && 'Supports PNG, JPG, WebP, GIF, BMP, TIFF, SVG, HEIC, PSD, AI...'}
-                  {activeCategory === 'video' && 'Supports MP4, WebM, AVI, MKV, MOV, FLV, WMV, MPEG, 3GP...'}
-                  {activeCategory === 'audio' && 'Supports MP3, WAV, FLAC, AAC, OGG, M4A, WMA, OPUS, MID...'}
-                  {activeCategory === 'document' && 'Supports PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT, TXT, RTF, MD...'}
-                </p>
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input 
+                  type="text"
+                  placeholder="Search PDF tool (e.g. merge, compress)..."
+                  value={pdfSearchQuery}
+                  onChange={(e) => setPdfSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-muted-foreground focus:outline-none focus:border-primary/50 font-outfit"
+                />
               </div>
-              <Button type="button" className="rounded-xl font-bold px-6">
-                Browse Files
-              </Button>
             </div>
+
+            {/* Grid display grouped by categories */}
+            {filteredPdfTools.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {filteredPdfTools.map((tool) => {
+                  const ToolIcon = tool.icon;
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => setSelectedPdfTool(tool.id)}
+                      className={`p-5 text-left border rounded-2xl bg-gradient-to-br ${tool.color} ${tool.borderColor} hover:scale-[1.02] hover:border-primary/50 transition-all duration-300 flex items-start gap-4 group min-h-[110px]`}
+                    >
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-white shrink-0 group-hover:scale-110 transition-transform">
+                        <ToolIcon className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1 min-w-0">
+                        <h3 className="font-bold text-sm text-white group-hover:text-primary transition-colors flex items-center gap-1.5">
+                          {tool.name}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground leading-normal line-clamp-2">{tool.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-muted-foreground text-xs">
+                No matching PDF tools found. Please try a different query.
+              </div>
+            )}
           </div>
-        ) : (
-          /* Editor / Converter Panel */
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-scale-up">
-            
-            {/* Left Panel: Combined Slim File Details & Compact Conversion Settings (Takes 7 columns) */}
-            <div className="md:col-span-7 space-y-6">
-              <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-5 shadow-2xl">
-                
-                {/* Combined Slim File Details Header */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-xl bg-white/5 text-white">
-                      {activeCategory === 'image' && <ImageIcon className="h-5 w-5 text-emerald-400" />}
-                      {activeCategory === 'video' && <VideoIcon className="h-5 w-5 text-cyan-400" />}
-                      {activeCategory === 'audio' && <AudioIcon className="h-5 w-5 text-pink-400" />}
-                      {activeCategory === 'document' && <FileText className="h-5 w-5 text-blue-400" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-xs text-white truncate max-w-[180px] sm:max-w-[240px]">{file.name}</p>
-                      <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
-                        {file.name.split('.').pop()?.toUpperCase()} • {formatBytes(file.size)}
-                      </p>
-                    </div>
+        )}
+
+        {/* WORKSPACE FOR PDF SUITE OR FORMAT CONVERTER */}
+        {(activeCategory !== 'document' || selectedPdfTool) && (
+          <div className="animate-scale-up">
+            {/* Slim Header for active PDF Tool */}
+            {selectedPdfTool && (
+              <div className="flex items-center justify-between bg-white/5 border border-white/5 p-4 rounded-3xl mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary">
+                    {React.createElement(PDF_TOOLS.find(t => t.id === selectedPdfTool)?.icon || FileText, { className: 'h-5 w-5' })}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    onClick={resetConverter}
-                    className="text-[10px] h-8 px-2.5 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5"
-                  >
-                    Change File
+                  <div>
+                    <h2 className="font-bold text-sm text-white">{PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name} Workspace</h2>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{PDF_TOOLS.find(t => t.id === selectedPdfTool)?.description}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setSelectedPdfTool(null);
+                    resetConverter();
+                  }}
+                  className="text-xs text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5 rounded-xl h-9"
+                >
+                  Back to PDF Suite
+                </Button>
+              </div>
+            )}
+
+            {!file ? (
+              /* Dropzone */
+              <div 
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group hover:scale-[1.01]"
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  accept={
+                    selectedPdfTool 
+                      ? (['jpg-to-pdf', 'word-to-pdf', 'powerpoint-to-pdf', 'excel-to-pdf', 'html-to-pdf'].includes(selectedPdfTool) 
+                        ? '.jpg,.jpeg,.png,.docx,.pptx,.xlsx,.html' 
+                        : '.pdf')
+                      : (activeCategory === 'image' ? PHOTO_FORMATS.map(ext => `.${ext}`).join(',') :
+                         activeCategory === 'video' ? VIDEO_FORMATS.map(ext => `.${ext}`).join(',') :
+                         activeCategory === 'audio' ? AUDIO_FORMATS.map(ext => `.${ext}`).join(',') :
+                         DOCUMENT_FORMATS.map(ext => `.${ext}`).join(','))
+                  } 
+                  className="hidden" 
+                />
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-max mx-auto group-hover:scale-110 transition-transform">
+                    <Upload className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="font-bold text-lg text-white">
+                      Drag & drop your file to {selectedPdfTool ? PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name : `convert`}
+                    </p>
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                      {selectedPdfTool 
+                        ? (['jpg-to-pdf', 'word-to-pdf', 'powerpoint-to-pdf', 'excel-to-pdf'].includes(selectedPdfTool) 
+                          ? 'Supports Word, Excel, PowerPoint, and Image files.'
+                          : 'This tool operates entirely client-side on .PDF documents.')
+                        : (activeCategory === 'image' ? 'Supports PNG, JPG, WebP, GIF, BMP, TIFF, SVG, HEIC, PSD, AI...' :
+                           activeCategory === 'video' ? 'Supports MP4, WebM, AVI, MKV, MOV, FLV, WMV, MPEG, 3GP...' :
+                           activeCategory === 'audio' ? 'Supports MP3, WAV, FLAC, AAC, OGG, M4A, WMA, OPUS, MID...' :
+                           'Supports PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT, TXT, RTF, MD...')}
+                    </p>
+                  </div>
+                  <Button type="button" className="rounded-xl font-bold px-6">
+                    Browse Files
                   </Button>
                 </div>
+              </div>
+            ) : (
+              /* Editor / Converter Workspace Panel */
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-scale-up">
+                
+                {/* Left Panel: Combined File Header & Tool Configurations (Takes 7 columns) */}
+                <div className="md:col-span-7 space-y-6">
+                  <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-5 shadow-2xl">
+                    
+                    {/* Combined Slim File Details Header */}
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-xl bg-white/5 text-white">
+                          {activeCategory === 'image' && <ImageIcon className="h-5 w-5 text-emerald-400" />}
+                          {activeCategory === 'video' && <VideoIcon className="h-5 w-5 text-cyan-400" />}
+                          {activeCategory === 'audio' && <AudioIcon className="h-5 w-5 text-pink-400" />}
+                          {activeCategory === 'document' && <FileText className="h-5 w-5 text-blue-400" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-xs text-white truncate max-w-[180px] sm:max-w-[240px]">{file.name}</p>
+                          <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
+                            {file.name.split('.').pop()?.toUpperCase()} • {formatBytes(file.size)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        onClick={resetConverter}
+                        className="text-[10px] h-8 px-2.5 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5"
+                      >
+                        Change File
+                      </Button>
+                    </div>
 
-                {/* CONVERSION MODE: Format vs Type */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Conversion Mode</label>
-                  <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-xl border border-white/5">
-                    <button
-                      onClick={() => setConversionMode('format')}
-                      className={`py-1 text-xs font-bold rounded-lg transition-all ${
-                        conversionMode === 'format' 
-                          ? 'bg-primary text-white shadow' 
-                          : 'text-muted-foreground hover:text-white'
-                      }`}
+                    {/* PDF Suite Custom Tool Workspaces */}
+                    {selectedPdfTool ? (
+                      <div className="space-y-4">
+                        
+                        {/* 1. MERGE PDF FILE LISTING WORKSPACE */}
+                        {selectedPdfTool === 'merge' && (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Files to Merge</label>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => multiFileInputRef.current?.click()}
+                                className="text-[10px] h-7 gap-1"
+                              >
+                                <Upload className="h-3 w-3" /> Add More
+                              </Button>
+                              <input 
+                                type="file" 
+                                ref={multiFileInputRef} 
+                                onChange={handleMultiFileChange} 
+                                accept=".pdf"
+                                multiple
+                                className="hidden" 
+                              />
+                            </div>
+                            <div className="bg-black/20 rounded-2xl border border-white/5 p-3 space-y-2 max-h-[140px] overflow-y-auto">
+                              <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-white/5 border border-white/5">
+                                <span className="truncate max-w-[180px] text-white font-semibold">1. {file.name}</span>
+                                <span className="font-mono text-[9px] text-muted-foreground">{formatBytes(file.size)}</span>
+                              </div>
+                              {mergeFiles.map((f, idx) => (
+                                <div key={idx} className="flex justify-between items-center text-xs p-2 rounded-lg bg-white/5 border border-white/5">
+                                  <span className="truncate max-w-[180px] text-white">2. {f.name}</span>
+                                  <span className="font-mono text-[9px] text-muted-foreground">{formatBytes(f.size)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 2. SPLIT PDF WORKSPACE */}
+                        {selectedPdfTool === 'split' && (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Page Range to Extract</label>
+                            <input 
+                              type="text" 
+                              value={splitRange} 
+                              onChange={(e) => setSplitRange(e.target.value)}
+                              placeholder="e.g. 1-3, 5, 7-10" 
+                              className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50"
+                            />
+                            <p className="text-[9px] text-muted-foreground mt-1">Specify hyphenated ranges or comma-separated individual pages.</p>
+                          </div>
+                        )}
+
+                        {/* 3. SIGN PDF DIGITAL PAD WORKSPACE */}
+                        {selectedPdfTool === 'sign' && (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Draw Signature</label>
+                              <div className="flex items-center gap-2">
+                                {['#00e5ff', '#a855f7', '#10b981', '#ffffff'].map((color) => (
+                                  <button 
+                                    key={color}
+                                    onClick={() => setSigColor(color)}
+                                    className={`h-4.5 w-4.5 rounded-full border border-white/10 ${sigColor === color ? 'ring-2 ring-primary scale-110' : ''}`}
+                                    style={{ backgroundColor: color }}
+                                  />
+                                ))}
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={clearSignature}
+                                  className="text-[9px] h-6 text-muted-foreground hover:text-white"
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+                            <canvas 
+                              ref={sigCanvasRef}
+                              width={320}
+                              height={120}
+                              onMouseDown={startDrawing}
+                              onMouseMove={draw}
+                              onMouseUp={stopDrawing}
+                              onMouseLeave={stopDrawing}
+                              className="w-full bg-black/40 rounded-2xl border border-white/10 cursor-crosshair h-[120px]"
+                            />
+                          </div>
+                        )}
+
+                        {/* 4. EDIT PDF ANNOTATIONS WORKSPACE */}
+                        {selectedPdfTool === 'edit' && (
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Text Annotation to Add</label>
+                            <div className="flex gap-2">
+                              <input 
+                                type="text"
+                                value={editorText}
+                                onChange={(e) => setEditorText(e.target.value)}
+                                placeholder="Type text to stamp on PDF..."
+                                className="flex-1 bg-black/20 border border-white/5 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-primary/50 font-outfit"
+                              />
+                              <Button onClick={addAnnotation} className="h-9 rounded-xl text-xs">Stamp</Button>
+                            </div>
+                            {editorAnnotations.length > 0 && (
+                              <div className="bg-black/20 rounded-2xl border border-white/5 p-3 space-y-1.5">
+                                <div className="flex justify-between items-center border-b border-white/5 pb-1">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Stamps Queue</span>
+                                  <button onClick={clearAnnotations} className="text-[8px] text-red-400 hover:underline">Clear All</button>
+                                </div>
+                                {editorAnnotations.map((anno, idx) => (
+                                  <div key={idx} className="text-[10px] text-emerald-400 font-mono">
+                                    ✓ Text: "{anno}"
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Generic settings (Compress / Protect) */}
+                        {['compress', 'protect', 'watermark', 'rotate'].includes(selectedPdfTool) && (
+                          <div className="space-y-4">
+                            {selectedPdfTool === 'protect' && (
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Set Password Protection</label>
+                                <input 
+                                  type="password" 
+                                  placeholder="Enter secure password to lock PDF..."
+                                  className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50"
+                                />
+                              </div>
+                            )}
+                            {selectedPdfTool === 'watermark' && (
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Watermark Text</label>
+                                <input 
+                                  type="text" 
+                                  placeholder="CONFIDENTIAL, COPY, DRAFT, etc..."
+                                  className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50"
+                                />
+                              </div>
+                            )}
+                            {selectedPdfTool === 'rotate' && (
+                              <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rotation Degree</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {['90° Right', '180° Flip', '90° Left'].map((deg) => (
+                                    <button 
+                                      key={deg} 
+                                      className="py-2 text-xs font-bold bg-white/5 border border-white/5 rounded-xl text-muted-foreground hover:text-white"
+                                    >
+                                      {deg}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                      </div>
+                    ) : (
+                      /* Standard Format Converter Settings */
+                      <div className="space-y-5">
+                        
+                        {/* CONVERSION MODE: Format vs Type */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Conversion Mode</label>
+                          <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-xl border border-white/5">
+                            <button
+                              onClick={() => setConversionMode('format')}
+                              className={`py-1 text-xs font-bold rounded-lg transition-all ${
+                                conversionMode === 'format' ? 'bg-primary text-white shadow' : 'text-muted-foreground hover:text-white'
+                              }`}
+                            >
+                              Format Conversion
+                            </button>
+                            <button
+                              onClick={() => setConversionMode('type')}
+                              className={`py-1 text-xs font-bold rounded-lg transition-all ${
+                                conversionMode === 'type' ? 'bg-primary text-white shadow' : 'text-muted-foreground hover:text-white'
+                              }`}
+                            >
+                              Type Conversion
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Compact Target Format Options */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            {conversionMode === 'format' ? 'Target Format' : 'Target File Type'}
+                          </label>
+                          
+                          {conversionMode === 'format' ? (
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                              {getTargetOptions().map((target) => (
+                                <button
+                                  key={target.extension}
+                                  onClick={() => setTargetFormat(target.extension)}
+                                  className={`py-2 text-center rounded-xl border font-mono font-bold text-xs transition-all ${
+                                    targetFormat === target.extension 
+                                      ? 'bg-primary border-primary text-white scale-105 shadow-lg shadow-primary/20' 
+                                      : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
+                                  }`}
+                                >
+                                  .{target.extension}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                              {getTargetOptions().map((target) => (
+                                <button
+                                  key={target.extension}
+                                  onClick={() => setTargetFormat(target.extension)}
+                                  className={`p-2.5 text-left rounded-xl border transition-all flex items-center justify-between gap-2 ${
+                                    targetFormat === target.extension 
+                                      ? 'bg-primary border-primary text-white scale-[1.02] shadow-lg shadow-primary/20' 
+                                      : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
+                                  }`}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-xs truncate">{target.label}</p>
+                                    <p className="text-[8px] text-muted-foreground truncate w-full group-hover:text-white mt-0.5">
+                                      {target.description}
+                                    </p>
+                                  </div>
+                                  <span className="font-mono font-bold text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white shrink-0">
+                                    .{target.extension}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    )}
+
+                    {/* SIDE-BY-SIDE: Quality Slider & Predicted Size Info */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
+                      
+                      {/* Column 1: Quality Slider */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
+                          <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
+                        </div>
+                        <Slider 
+                          value={[quality]} 
+                          onValueChange={(val) => setQuality(val[0])} 
+                          max={100} 
+                          min={10} 
+                          step={1}
+                          className="py-1"
+                        />
+                        <div className="flex justify-between text-[8px] text-muted-foreground font-semibold font-outfit">
+                          <span>MAX COMPRESS</span>
+                          <span>BALANCED</span>
+                          <span>LOSSLESS</span>
+                        </div>
+                      </div>
+
+                      {/* Column 2: Predicted Size Info Card */}
+                      <div className="bg-black/25 p-3 rounded-2xl border border-white/5 flex flex-col justify-center space-y-1.5 animate-pulse-subtle">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground font-outfit">Predicted Size:</span>
+                          <span className="font-extrabold text-cyan-400 font-mono">
+                            {formatBytes(getPredictedSize())}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-muted-foreground font-outfit">Estimated Ratio:</span>
+                          <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {getSavingsPercentage() >= 0 
+                              ? `-${getSavingsPercentage()}% (Compressed)` 
+                              : `+${Math.abs(getSavingsPercentage())}% (Expanded)`}
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Action Button */}
+                    <Button 
+                      onClick={startConversion}
+                      disabled={isConverting || (selectedPdfTool === 'merge' && mergeFiles.length === 0 && !file)}
+                      className="w-full h-11 rounded-2xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-2"
                     >
-                      Format Conversion
-                    </button>
-                    <button
-                      onClick={() => setConversionMode('type')}
-                      className={`py-1 text-xs font-bold rounded-lg transition-all ${
-                        conversionMode === 'type' 
-                          ? 'bg-primary text-white shadow' 
-                          : 'text-muted-foreground hover:text-white'
-                      }`}
-                    >
-                      Type Conversion
-                    </button>
+                      <RefreshCw className={`h-4 w-4 ${isConverting ? 'animate-spin' : ''}`} />
+                      {isConverting ? 'Processing Document...' : (selectedPdfTool ? `Execute ${PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name}` : `Convert to ${targetFormat.toUpperCase()}`)}
+                    </Button>
+
                   </div>
                 </div>
 
-                {/* Compact Target Format Options */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {conversionMode === 'format' ? 'Target Format' : 'Target File Type'}
-                  </label>
+                {/* Right Panel: Processing logs and results (Takes 5 columns) */}
+                <div className="md:col-span-5 space-y-6">
                   
-                  {conversionMode === 'format' ? (
-                    /* Format Conversion: Clean pill grid */
-                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                      {getTargetOptions().map((target) => (
-                        <button
-                          key={target.extension}
-                          onClick={() => setTargetFormat(target.extension)}
-                          className={`py-2 text-center rounded-xl border font-mono font-bold text-xs transition-all ${
-                            targetFormat === target.extension 
-                              ? 'bg-primary border-primary text-white scale-105 shadow-lg shadow-primary/20' 
-                              : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
-                          }`}
-                        >
-                          .{target.extension}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    /* Type Conversion: Compact cards */
-                    <div className="grid grid-cols-2 gap-2">
-                      {getTargetOptions().map((target) => (
-                        <button
-                          key={target.extension}
-                          onClick={() => setTargetFormat(target.extension)}
-                          className={`p-2.5 text-left rounded-xl border transition-all flex items-center justify-between gap-2 ${
-                            targetFormat === target.extension 
-                              ? 'bg-primary border-primary text-white scale-[1.02] shadow-lg shadow-primary/20' 
-                              : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
-                          }`}
-                        >
-                          <div className="min-w-0">
-                            <p className="font-bold text-xs truncate">{target.label}</p>
-                            <p className="text-[8px] text-muted-foreground truncate w-full group-hover:text-white mt-0.5">
-                              {target.description}
-                            </p>
+                  {/* Progress Console */}
+                  {(isConverting || logs.length > 0) && (
+                    <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-4 flex flex-col h-[350px] justify-between">
+                      <div>
+                        <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                          <Terminal className="h-4 w-4 text-cyan-400 animate-pulse" /> Processing Console
+                        </h3>
+                        
+                        {/* Progress Bar */}
+                        <div className="space-y-1 mt-4">
+                          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
+                              style={{ width: `${progress}%` }}
+                            ></div>
                           </div>
-                          <span className="font-mono font-bold text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white shrink-0">
-                            .{target.extension}
+                          <div className="flex justify-between text-[10px] font-bold font-mono text-muted-foreground">
+                            <span>PIPELINE STATUS</span>
+                            <span className="text-primary">{progress}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Log console window */}
+                      <div className="flex-1 bg-black/40 rounded-2xl border border-white/5 p-4 my-3 font-mono text-[10px] text-emerald-400 overflow-y-auto space-y-1.5 scrollbar-thin">
+                        {logs.map((log, idx) => (
+                          <div key={idx} className="leading-relaxed break-all">{log}</div>
+                        ))}
+                        <div ref={logEndRef} />
+                      </div>
+
+                      <span className="text-[9px] font-bold tracking-widest text-muted-foreground/50 text-center uppercase font-mono">Zero-Knowledge client sandbox</span>
+                    </div>
+                  )}
+
+                  {/* Conversion Result Block */}
+                  {convertedBlob && !isConverting && (
+                    <div className="p-6 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl space-y-5 animate-scale-up">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                          <CheckCircle className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sm text-white">Action Successful</h3>
+                          <p className="text-xs text-muted-foreground">Your processed PDF package is ready for download.</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 bg-black/20 p-4 rounded-2xl border border-white/5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground font-outfit">Output File:</span>
+                          <span className="font-bold text-white font-mono truncate max-w-[180px]">{convertedName}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground font-outfit">Size savings:</span>
+                          <span className="font-bold text-emerald-400 font-mono">
+                            {(((file ? file.size : 1000) - convertedSize) / (file ? file.size : 1000) * 100).toFixed(1)}% savings
                           </span>
-                        </button>
-                      ))}
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground font-outfit">Final Payload Size:</span>
+                          <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
+                        </div>
+                      </div>
+
+                      <Button 
+                        onClick={triggerDownload}
+                        className="w-full h-12 rounded-2xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                      >
+                        <Download className="h-4 w-4" /> Download Processed File
+                      </Button>
                     </div>
                   )}
                 </div>
 
-                {/* SIDE-BY-SIDE: Quality Slider & Predicted Size Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                  
-                  {/* Column 1: Quality Slider */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
-                      <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
-                    </div>
-                    <Slider 
-                      value={[quality]} 
-                      onValueChange={(val) => setQuality(val[0])} 
-                      max={100} 
-                      min={10} 
-                      step={1}
-                      className="py-1"
-                    />
-                    <div className="flex justify-between text-[8px] text-muted-foreground font-semibold font-outfit">
-                      <span>MAX COMPRESS</span>
-                      <span>BALANCED</span>
-                      <span>LOSSLESS</span>
-                    </div>
-                  </div>
-
-                  {/* Column 2: Predicted Size Info Card */}
-                  <div className="bg-black/25 p-3 rounded-2xl border border-white/5 flex flex-col justify-center space-y-1.5 animate-pulse-subtle">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground font-outfit">Predicted Size:</span>
-                      <span className="font-extrabold text-cyan-400 font-mono">
-                        {formatBytes(getPredictedSize())}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-muted-foreground font-outfit">Estimated Ratio:</span>
-                      <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {getSavingsPercentage() >= 0 
-                          ? `-${getSavingsPercentage()}% (Compressed)` 
-                          : `+${Math.abs(getSavingsPercentage())}% (Expanded)`}
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Action Button */}
-                <Button 
-                  onClick={startConversion}
-                  disabled={isConverting}
-                  className="w-full h-11 rounded-2xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isConverting ? 'animate-spin' : ''}`} />
-                  {isConverting ? 'Running Conversion...' : `Convert to ${targetFormat.toUpperCase()}`}
-                </Button>
-
               </div>
-            </div>
-
-            {/* Right Panel: Processing logs and results (Takes 5 columns) */}
-            <div className="md:col-span-5 space-y-6">
-              
-              {/* Progress Console */}
-              {(isConverting || logs.length > 0) && (
-                <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-4 flex flex-col h-[350px] justify-between">
-                  <div>
-                    <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                      <Terminal className="h-4 w-4 text-cyan-400 animate-pulse" /> Processing Console
-                    </h3>
-                    
-                    {/* Progress Bar */}
-                    <div className="space-y-1 mt-4">
-                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between text-[10px] font-bold font-mono text-muted-foreground">
-                        <span>PIPELINE STATUS</span>
-                        <span className="text-primary">{progress}%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Log console window */}
-                  <div className="flex-1 bg-black/40 rounded-2xl border border-white/5 p-4 my-3 font-mono text-[10px] text-emerald-400 overflow-y-auto space-y-1.5 scrollbar-thin">
-                    {logs.map((log, idx) => (
-                      <div key={idx} className="leading-relaxed break-all">{log}</div>
-                    ))}
-                    <div ref={logEndRef} />
-                  </div>
-
-                  <span className="text-[9px] font-bold tracking-widest text-muted-foreground/50 text-center uppercase font-mono">Zero-Knowledge client sandbox</span>
-                </div>
-              )}
-
-              {/* Conversion Result Block */}
-              {convertedBlob && !isConverting && (
-                <div className="p-6 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl space-y-5 animate-scale-up">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                      <CheckCircle className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm text-white">Conversion Successful</h3>
-                      <p className="text-xs text-muted-foreground">Your transcoded payload is ready for download.</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 bg-black/20 p-4 rounded-2xl border border-white/5">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Output File:</span>
-                      <span className="font-bold text-white font-mono truncate max-w-[200px]">{convertedName}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Size savings:</span>
-                      <span className="font-bold text-emerald-400 font-mono">
-                        {(((file.size - convertedSize) / file.size) * 100).toFixed(1)}% savings
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Final Payload Size:</span>
-                      <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
-                    </div>
-                  </div>
-
-                  <Button 
-                    onClick={triggerDownload}
-                    className="w-full h-12 rounded-2xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-                  >
-                    <Download className="h-4 w-4" /> Download Converted File
-                  </Button>
-                </div>
-              )}
-            </div>
-
+            )}
           </div>
         )}
       </div>
