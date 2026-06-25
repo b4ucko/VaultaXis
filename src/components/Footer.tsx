@@ -14,37 +14,37 @@ export function Footer() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="Vault@Xis Logo" className="h-6 w-6 object-contain" />
-            <span className="font-extrabold tracking-wider text-sm bg-clip-text text-transparent bg-gradient-to-r from-primary to-cyan-400">
+            <span className="font-extrabold tracking-wider text-base bg-clip-text text-transparent bg-gradient-to-r from-primary to-cyan-400">
               Vault@Xis
             </span>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Next-generation secure client-side file cryptography. Leverages native hardware-accelerated Web Crypto Permutation pipelines.
           </p>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full w-max border border-emerald-500/20">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full w-max border border-emerald-500/20">
             <Shield className="h-3.5 w-3.5" /> Zero-Knowledge Verified
           </div>
         </div>
 
         {/* Column 1: Crypto Suite */}
         <div className="space-y-3.5">
-          <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+          <h3 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <Cpu className="h-3.5 w-3.5 text-primary" /> Crypto Suite
           </h3>
-          <ul className="space-y-2 text-xs text-muted-foreground">
+          <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
               <Link to="/spec/aes-256-gcm" className="hover:text-primary transition-colors flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-primary"></span> AES-256-GCM Spec
+                <span className="h-1.5 w-1.5 rounded-full bg-primary"></span> AES-256-GCM Spec
               </Link>
             </li>
             <li>
               <Link to="/spec/pbkdf2" className="hover:text-primary transition-colors flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-primary"></span> PBKDF2 Derivation
+                <span className="h-1.5 w-1.5 rounded-full bg-primary"></span> PBKDF2 Derivation
               </Link>
             </li>
             <li>
               <Link to="/spec/web-crypto" className="hover:text-primary transition-colors flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-primary"></span> Web Crypto API
+                <span className="h-1.5 w-1.5 rounded-full bg-primary"></span> Web Crypto API
               </Link>
             </li>
           </ul>
@@ -52,23 +52,23 @@ export function Footer() {
 
         {/* Column 2: Storage & Clouds */}
         <div className="space-y-3.5">
-          <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+          <h3 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <HardDrive className="h-3.5 w-3.5 text-cyan-400" /> Storage & Cloud
           </h3>
-          <ul className="space-y-2 text-xs text-muted-foreground">
+          <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
               <Link to="/nas-setup" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-cyan-400"></span> NAS Setup Guide
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400"></span> NAS Setup Guide
               </Link>
             </li>
             <li>
               <Link to="/webdav" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-cyan-400"></span> WebDAV Integration
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400"></span> WebDAV Integration
               </Link>
             </li>
             <li>
               <Link to="/cloud-sync" className="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
-                <span className="h-1 w-1 rounded-full bg-cyan-400"></span> Cloud Storage Sync
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400"></span> Cloud Storage Sync
               </Link>
             </li>
           </ul>
@@ -76,11 +76,11 @@ export function Footer() {
 
         {/* Column 3: Developer */}
         <div className="space-y-3.5">
-          <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+          <h3 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5 text-purple-400" /> Developer
           </h3>
           <div className="space-y-2">
-            <p className="text-[10px] text-muted-foreground">Click profile to connect:</p>
+            <p className="text-xs text-muted-foreground">Click profile to connect:</p>
             <div className="pt-1">
               <TooltipProvider>
                 <Tooltip>
@@ -97,8 +97,8 @@ export function Footer() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">Saikat Bhattacharya</span>
-                        <span className="text-[9px] text-muted-foreground truncate flex items-center gap-1">
+                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">Saikat Bhattacharya</span>
+                        <span className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
                           <Linkedin className="h-2.5 w-2.5 text-sky-500" /> saikatxbhattacharya
                         </span>
                       </div>
@@ -116,7 +116,7 @@ export function Footer() {
 
       {/* Lower Copyright Bar */}
       <div className="border-t border-black/5 dark:border-white/5 py-6 bg-black/5 dark:bg-black/30">
-        <div className="container max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+        <div className="container max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <p>© 2026 Vault@Xis System. Local client-side operations only. All rights reserved.</p>
           <div className="flex gap-4">
             <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
