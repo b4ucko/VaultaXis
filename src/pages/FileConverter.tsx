@@ -1295,11 +1295,83 @@ export default function FileConverter() {
               /* Editor / Converter Workspace Panel */
               <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-scale-up">
                 
-                {/* Left Panel: Combined File Header & Tool Configurations (Takes 7 columns) */}
-                <div className="md:col-span-7 space-y-6">
+                {/* Left Panel: Combined File Header & Tool Configurations */}
+                <div className={`${selectedPdfTool ? 'md:col-span-12' : 'md:col-span-7'} space-y-6`}>
                   <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-5 shadow-2xl">
                     
-                    {/* Combined Slim File Details Header */}
+                    {selectedPdfTool && isConverting ? (
+                      /* State 2: Processing Animation */
+                      <div className="py-12 flex flex-col items-center justify-center space-y-6 text-center animate-fade-in">
+                        <div className="relative h-24 w-24 flex items-center justify-center">
+                          <div className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                          <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
+                            <RefreshCw className="h-8 w-8 text-primary animate-spin-slow" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="font-extrabold text-lg text-white">Processing Document...</h3>
+                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                            {logs[logs.length - 1] ? logs[logs.length - 1].replace(/\[.*\]\s*/, '') : 'Executing client-side operations...'}
+                          </p>
+                        </div>
+                        
+                        <div className="w-full max-w-md space-y-2">
+                          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[10px] font-bold font-mono text-muted-foreground">
+                            <span>PIPELINE PROGRESS</span>
+                            <span className="text-primary">{progress}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : selectedPdfTool && convertedBlob ? (
+                      /* State 3: Action Successful / Download */
+                      <div className="py-10 flex flex-col items-center justify-center space-y-6 text-center animate-scale-up">
+                        <div className="p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-lg shadow-emerald-500/5">
+                          <CheckCircle className="h-12 w-12" />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <h3 className="font-extrabold text-xl text-white">Action Successful</h3>
+                          <p className="text-xs text-muted-foreground max-w-sm">
+                            Your processed PDF document has been compiled inside the client sandbox.
+                          </p>
+                        </div>
+
+                        <div className="w-full max-w-md bg-black/25 p-4 rounded-2xl border border-white/5 space-y-2.5 text-left font-outfit">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground font-outfit">Output File:</span>
+                            <span className="font-bold text-white font-mono truncate max-w-[200px]">{convertedName}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground font-outfit">Final Size:</span>
+                            <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                          <Button 
+                            onClick={triggerDownload}
+                            className="flex-1 h-12 rounded-2xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                          >
+                            <Download className="h-4 w-4" /> Download Processed File
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={resetConverter}
+                            className="flex-1 h-12 rounded-2xl font-bold border-white/10 hover:bg-white/5 text-xs text-muted-foreground hover:text-white"
+                          >
+                            Convert Another
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Combined Slim File Details Header */}
                     <div className="flex items-center justify-between border-b border-white/5 pb-4">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="p-2 rounded-xl bg-white/5 text-white">
@@ -1579,48 +1651,50 @@ export default function FileConverter() {
                     )}
 
                     {/* SIDE-BY-SIDE: Quality Slider & Predicted Size Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                      
-                      {/* Column 1: Quality Slider */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
-                          <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
+                    {(!selectedPdfTool || selectedPdfTool === 'compress') && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
+                        
+                        {/* Column 1: Quality Slider */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
+                            <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
+                          </div>
+                          <Slider 
+                            value={[quality]} 
+                            onValueChange={(val) => setQuality(val[0])} 
+                            max={100} 
+                            min={10} 
+                            step={1}
+                            className="py-1"
+                          />
+                          <div className="flex justify-between text-[8px] text-muted-foreground font-semibold font-outfit">
+                            <span>MAX COMPRESS</span>
+                            <span>BALANCED</span>
+                            <span>LOSSLESS</span>
+                          </div>
                         </div>
-                        <Slider 
-                          value={[quality]} 
-                          onValueChange={(val) => setQuality(val[0])} 
-                          max={100} 
-                          min={10} 
-                          step={1}
-                          className="py-1"
-                        />
-                        <div className="flex justify-between text-[8px] text-muted-foreground font-semibold font-outfit">
-                          <span>MAX COMPRESS</span>
-                          <span>BALANCED</span>
-                          <span>LOSSLESS</span>
-                        </div>
-                      </div>
 
-                      {/* Column 2: Predicted Size Info Card */}
-                      <div className="bg-black/25 p-3 rounded-2xl border border-white/5 flex flex-col justify-center space-y-1.5 animate-pulse-subtle">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground font-outfit">Predicted Size:</span>
-                          <span className="font-extrabold text-cyan-400 font-mono">
-                            {formatBytes(getPredictedSize())}
-                          </span>
+                        {/* Column 2: Predicted Size Info Card */}
+                        <div className="bg-black/25 p-3 rounded-2xl border border-white/5 flex flex-col justify-center space-y-1.5 animate-pulse-subtle">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground font-outfit">Predicted Size:</span>
+                            <span className="font-extrabold text-cyan-400 font-mono">
+                              {formatBytes(getPredictedSize())}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-muted-foreground font-outfit">Estimated Ratio:</span>
+                            <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                              {getSavingsPercentage() >= 0 
+                                ? `-${getSavingsPercentage()}% (Compressed)` 
+                                : `+${Math.abs(getSavingsPercentage())}% (Expanded)`}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-muted-foreground font-outfit">Estimated Ratio:</span>
-                          <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                            {getSavingsPercentage() >= 0 
-                              ? `-${getSavingsPercentage()}% (Compressed)` 
-                              : `+${Math.abs(getSavingsPercentage())}% (Expanded)`}
-                          </span>
-                        </div>
-                      </div>
 
-                    </div>
+                      </div>
+                    )}
 
                     {/* Action Button */}
                     <Button 
@@ -1632,11 +1706,15 @@ export default function FileConverter() {
                       {isConverting ? 'Processing Document...' : (selectedPdfTool ? `Execute ${PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name}` : `Convert to ${targetFormat.toUpperCase()}`)}
                     </Button>
 
+                      </>
+                    )}
+
                   </div>
                 </div>
 
                 {/* Right Panel: Processing logs and results (Takes 5 columns) */}
-                <div className="md:col-span-5 space-y-6">
+                {!selectedPdfTool && (
+                  <div className="md:col-span-5 space-y-6">
                   
                   {/* Progress Console */}
                   {(isConverting || logs.length > 0) && (
@@ -1711,7 +1789,8 @@ export default function FileConverter() {
                       </Button>
                     </div>
                   )}
-                </div>
+                  </div>
+                )}
 
               </div>
             )}
