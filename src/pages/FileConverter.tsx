@@ -226,81 +226,103 @@ export default function FileConverter() {
     const tgtExt = targetFormat.toLowerCase();
     const Q = quality;
 
+    // Define standard dynamic factors based on the quality slider Q (10 to 100)
+    const losslessFactor = 0.75 + 0.25 * (Q / 100);
+    const lossyImageFactor = 0.03 + 0.97 * Math.pow(Q / 100, 2.5);
+    const webpFactor = 0.02 + 0.98 * Math.pow(Q / 100, 2.2);
+    const lossyVideoFactor = 0.08 + 0.92 * Math.pow(Q / 100, 1.8);
+    const lossyAudioFactor = 0.12 + 0.88 * (Q / 100);
+    const rawFactor = 0.9 + 0.1 * (Q / 100);
+
     if (conversionMode === 'format') {
       if (activeCategory === 'image') {
         if (tgtExt === 'png') {
-          if (srcExt === 'png') return originalSize;
-          if (['jpg', 'jpeg', 'webp'].includes(srcExt)) return Math.round(originalSize * 3.2);
-          return Math.round(originalSize * 1.5);
+          const base = srcExt === 'png' ? originalSize : (['jpg', 'jpeg', 'webp'].includes(srcExt) ? originalSize * 3.2 : originalSize * 1.5);
+          return Math.round(base * losslessFactor);
         }
         if (['jpg', 'jpeg'].includes(tgtExt)) {
-          const factor = 0.03 + 0.97 * Math.pow(Q / 100, 2.5);
-          if (['jpg', 'jpeg'].includes(srcExt)) return Math.round(originalSize * factor);
-          if (srcExt === 'png') return Math.round(originalSize * 0.22 * factor);
-          return Math.round(originalSize * 0.3 * factor);
+          if (['jpg', 'jpeg'].includes(srcExt)) return Math.round(originalSize * lossyImageFactor);
+          if (srcExt === 'png') return Math.round(originalSize * 0.22 * lossyImageFactor);
+          return Math.round(originalSize * 0.3 * lossyImageFactor);
         }
         if (tgtExt === 'webp') {
-          const factor = 0.02 + 0.98 * Math.pow(Q / 100, 2.2);
-          if (srcExt === 'webp') return Math.round(originalSize * factor);
-          if (srcExt === 'png') return Math.round(originalSize * 0.16 * factor);
-          return Math.round(originalSize * 0.25 * factor);
+          if (srcExt === 'webp') return Math.round(originalSize * webpFactor);
+          if (srcExt === 'png') return Math.round(originalSize * 0.16 * webpFactor);
+          return Math.round(originalSize * 0.25 * webpFactor);
+        }
+        if (tgtExt === 'gif') {
+          const factor = 0.6 + 0.4 * (Q / 100);
+          const base = srcExt === 'gif' ? originalSize : (srcExt === 'png' ? originalSize * 0.85 : originalSize * 1.8);
+          return Math.round(base * factor);
         }
         if (tgtExt === 'bmp') {
-          return srcExt === 'bmp' ? originalSize : originalSize * 6;
+          const base = srcExt === 'bmp' ? originalSize : originalSize * 6;
+          return Math.round(base * rawFactor);
+        }
+        if (tgtExt === 'tiff') {
+          const base = srcExt === 'tiff' ? originalSize : (srcExt === 'png' ? originalSize * 1.1 : originalSize * 3.8);
+          return Math.round(base * losslessFactor);
         }
         return Math.round(originalSize * (0.6 + (Q / 100) * 0.4));
       } else if (activeCategory === 'video') {
-        const factor = 0.08 + 0.92 * Math.pow(Q / 100, 1.8);
         if (tgtExt === 'webm') {
-          return srcExt === 'webm' ? Math.round(originalSize * factor) : Math.round(originalSize * 0.78 * factor);
+          const base = srcExt === 'webm' ? originalSize : originalSize * 0.78;
+          return Math.round(base * lossyVideoFactor);
         }
         if (tgtExt === 'mp4') {
-          return srcExt === 'mp4' ? Math.round(originalSize * factor) : Math.round(originalSize * 1.25 * factor);
+          const base = srcExt === 'mp4' ? originalSize : originalSize * 1.25;
+          return Math.round(base * lossyVideoFactor);
         }
-        return Math.round(originalSize * factor);
+        return Math.round(originalSize * lossyVideoFactor);
       } else if (activeCategory === 'audio') {
-        const factor = 0.12 + 0.88 * (Q / 100);
         if (tgtExt === 'mp3') {
-          return srcExt === 'mp3' ? Math.round(originalSize * factor) : Math.round(originalSize * 0.18 * factor);
+          const base = srcExt === 'mp3' ? originalSize : originalSize * 0.18;
+          return Math.round(base * lossyAudioFactor);
         }
         if (tgtExt === 'wav') {
-          return srcExt === 'wav' ? originalSize : Math.round(originalSize * 5.2);
+          const base = srcExt === 'wav' ? originalSize : originalSize * 5.2;
+          return Math.round(base * losslessFactor);
         }
-        return Math.round(originalSize * factor);
+        return Math.round(originalSize * lossyAudioFactor);
       } else {
         // Documents
         if (tgtExt === 'pdf') {
-          return srcExt === 'pdf' ? originalSize : Math.round(originalSize * 1.6);
+          const base = srcExt === 'pdf' ? originalSize : originalSize * 1.6;
+          return Math.round(base * losslessFactor);
         }
         if (tgtExt === 'txt') {
-          return srcExt === 'txt' ? originalSize : Math.round(originalSize * 0.12);
+          const base = srcExt === 'txt' ? originalSize : originalSize * 0.12;
+          return Math.round(base * losslessFactor);
         }
-        return originalSize;
+        return Math.round(originalSize * losslessFactor);
       }
     } else {
-      // Cross-category conversion
+      // Cross-category type conversion
       if (activeCategory === 'image') {
-        if (tgtExt === 'pdf') return Math.round(originalSize * 1.12);
-        if (tgtExt === 'txt') return Math.round(originalSize * 0.005 + 50); // OCR text is tiny
-        if (tgtExt === 'gif') return Math.round(originalSize * 4.5 * (Q / 100)); // Animated sequence
-        return Math.round(originalSize * 0.92); // ZIP
+        if (tgtExt === 'pdf') return Math.round(originalSize * 1.12 * losslessFactor);
+        if (tgtExt === 'txt') return Math.round((originalSize * 0.005 + 50) * losslessFactor);
+        if (tgtExt === 'gif') return Math.round(originalSize * 4.5 * (Q / 100));
+        return Math.round(originalSize * 0.92 * losslessFactor);
       }
       if (activeCategory === 'video') {
-        if (['mp3', 'wav'].includes(tgtExt)) return Math.round(originalSize * 0.08 * (tgtExt === 'wav' ? 3.5 : 1.0)); // Audio track extraction
+        if (['mp3', 'wav'].includes(tgtExt)) {
+          const base = originalSize * 0.08 * (tgtExt === 'wav' ? 3.5 : 1.0);
+          return Math.round(base * (tgtExt === 'wav' ? losslessFactor : lossyAudioFactor));
+        }
         if (tgtExt === 'gif') return Math.round(originalSize * 0.35 * (Q / 100));
-        if (tgtExt === 'pdf') return Math.round(originalSize * 0.15);
-        return Math.round(originalSize * 0.002 + 150); // transcript TXT
+        if (tgtExt === 'pdf') return Math.round(originalSize * 0.15 * losslessFactor);
+        return Math.round((originalSize * 0.002 + 150) * losslessFactor);
       }
       if (activeCategory === 'audio') {
-        if (tgtExt === 'txt') return Math.round(originalSize * 0.001 + 200); // transcript
-        if (tgtExt === 'mp4') return Math.round(originalSize * 1.8); // Video container wrapper
-        return Math.round(originalSize * 0.94); // ZIP
+        if (tgtExt === 'txt') return Math.round((originalSize * 0.001 + 200) * losslessFactor);
+        if (tgtExt === 'mp4') return Math.round(originalSize * 1.8 * lossyVideoFactor);
+        return Math.round(originalSize * 0.94 * losslessFactor);
       }
       // Documents
-      if (tgtExt === 'png') return Math.round(originalSize * 4.8); // Page renders
-      if (tgtExt === 'mp3') return Math.round(originalSize * 2.5 * (Q / 100)); // TTS audio file
-      if (tgtExt === 'json') return Math.round(originalSize * 1.3);
-      return Math.round(originalSize * 0.85); // ZIP
+      if (tgtExt === 'png') return Math.round(originalSize * 4.8 * webpFactor);
+      if (tgtExt === 'mp3') return Math.round(originalSize * 2.5 * lossyAudioFactor);
+      if (tgtExt === 'json') return Math.round(originalSize * 1.3 * losslessFactor);
+      return Math.round(originalSize * 0.85 * losslessFactor);
     }
   };
 
