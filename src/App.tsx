@@ -18,6 +18,7 @@ import Pbkdf2Spec from "./pages/Pbkdf2Spec";
 import WebCryptoSpec from "./pages/WebCryptoSpec";
 import WebdavIntegration from "./pages/WebdavIntegration";
 import CloudSync from "./pages/CloudSync";
+import SupportedFormats from "./pages/SupportedFormats";
 import ScrollToTop from "@/components/ScrollToTop";
 
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/spec/web-crypto" element={<WebCryptoSpec />} />
             <Route path="/webdav" element={<WebdavIntegration />} />
             <Route path="/cloud-sync" element={<CloudSync />} />
+            <Route path="/supported-formats" element={<SupportedFormats />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

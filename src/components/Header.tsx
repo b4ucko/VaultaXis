@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, HardDrive } from 'lucide-react';
+import { Sun, Moon, HardDrive, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileCategory } from '@/lib/types';
 import { useTheme } from '@/hooks/use-theme';
@@ -25,6 +25,14 @@ export function Header({ onSelectFileCategory, selectedCategory }: HeaderProps) 
         </div>
         
         <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => navigate('/supported-formats')}
+          >
+            <HelpCircle className="h-4 w-4 text-cyan-400" /> Supported File Types
+          </Button>
+
           <Button 
             variant="outline" 
             size="icon" 
