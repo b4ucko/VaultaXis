@@ -654,52 +654,44 @@ export default function FileConverter() {
           </div>
         ) : (
           /* Editor / Converter Panel */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-scale-up">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 animate-scale-up">
             
-            {/* Left Panel: File Info and Options */}
-            <div className="space-y-6">
-              <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-4">
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" /> Loaded File Details
-                </h3>
+            {/* Left Panel: Combined Slim File Details & Compact Conversion Settings (Takes 7 columns) */}
+            <div className="md:col-span-7 space-y-6">
+              <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-5 shadow-2xl">
                 
-                <div className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
-                  <div className="p-3 rounded-xl bg-white/5 text-white">
-                    {activeCategory === 'image' && <ImageIcon className="h-6 w-6 text-emerald-400" />}
-                    {activeCategory === 'video' && <VideoIcon className="h-6 w-6 text-cyan-400" />}
-                    {activeCategory === 'audio' && <AudioIcon className="h-6 w-6 text-pink-400" />}
-                    {activeCategory === 'document' && <FileText className="h-6 w-6 text-blue-400" />}
+                {/* Combined Slim File Details Header */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 rounded-xl bg-white/5 text-white">
+                      {activeCategory === 'image' && <ImageIcon className="h-5 w-5 text-emerald-400" />}
+                      {activeCategory === 'video' && <VideoIcon className="h-5 w-5 text-cyan-400" />}
+                      {activeCategory === 'audio' && <AudioIcon className="h-5 w-5 text-pink-400" />}
+                      {activeCategory === 'document' && <FileText className="h-5 w-5 text-blue-400" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-xs text-white truncate max-w-[180px] sm:max-w-[240px]">{file.name}</p>
+                      <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
+                        {file.name.split('.').pop()?.toUpperCase()} • {formatBytes(file.size)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-xs text-white truncate">{file.name}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                      Extension: {file.name.split('.').pop()?.toUpperCase()} • Size: {formatBytes(file.size)}
-                    </p>
-                  </div>
+                  <Button 
+                    variant="ghost" 
+                    onClick={resetConverter}
+                    className="text-[10px] h-8 px-2.5 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5"
+                  >
+                    Change File
+                  </Button>
                 </div>
 
-                <Button 
-                  variant="ghost" 
-                  onClick={resetConverter} 
-                  className="w-full text-xs text-muted-foreground hover:text-white hover:bg-white/5"
-                >
-                  Choose a different file
-                </Button>
-              </div>
-
-              {/* Conversion Settings Card */}
-              <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-5">
-                <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-purple-400" /> Conversion Settings
-                </h3>
-
                 {/* CONVERSION MODE: Format vs Type */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Conversion Mode</label>
-                  <div className="grid grid-cols-2 gap-2 bg-black/20 p-1 rounded-xl border border-white/5">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Conversion Mode</label>
+                  <div className="grid grid-cols-2 gap-1 bg-black/20 p-1 rounded-xl border border-white/5">
                     <button
                       onClick={() => setConversionMode('format')}
-                      className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      className={`py-1 text-xs font-bold rounded-lg transition-all ${
                         conversionMode === 'format' 
                           ? 'bg-primary text-white shadow' 
                           : 'text-muted-foreground hover:text-white'
@@ -709,7 +701,7 @@ export default function FileConverter() {
                     </button>
                     <button
                       onClick={() => setConversionMode('type')}
-                      className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      className={`py-1 text-xs font-bold rounded-lg transition-all ${
                         conversionMode === 'type' 
                           ? 'bg-primary text-white shadow' 
                           : 'text-muted-foreground hover:text-white'
@@ -720,63 +712,91 @@ export default function FileConverter() {
                   </div>
                 </div>
 
-                {/* Target Format Options */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                {/* Compact Target Format Options */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {conversionMode === 'format' ? 'Target Format' : 'Target File Type'}
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {getTargetOptions().map((target) => (
-                      <button
-                        key={target.extension}
-                        onClick={() => setTargetFormat(target.extension)}
-                        className={`p-3 text-left rounded-xl border transition-all flex flex-col justify-between h-[72px] ${
-                          targetFormat === target.extension 
-                            ? 'bg-primary border-primary text-white scale-[1.02] shadow-lg shadow-primary/20' 
-                            : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        <span className="font-mono font-bold text-xs">
-                          {conversionMode === 'format' ? target.label : target.label}
-                        </span>
-                        <span className="text-[9px] leading-tight text-muted-foreground truncate w-full group-hover:text-white">
-                          {target.description}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  
+                  {conversionMode === 'format' ? (
+                    /* Format Conversion: Clean pill grid */
+                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                      {getTargetOptions().map((target) => (
+                        <button
+                          key={target.extension}
+                          onClick={() => setTargetFormat(target.extension)}
+                          className={`py-2 text-center rounded-xl border font-mono font-bold text-xs transition-all ${
+                            targetFormat === target.extension 
+                              ? 'bg-primary border-primary text-white scale-105 shadow-lg shadow-primary/20' 
+                              : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          .{target.extension}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Type Conversion: Compact cards */
+                    <div className="grid grid-cols-2 gap-2">
+                      {getTargetOptions().map((target) => (
+                        <button
+                          key={target.extension}
+                          onClick={() => setTargetFormat(target.extension)}
+                          className={`p-2.5 text-left rounded-xl border transition-all flex items-center justify-between gap-2 ${
+                            targetFormat === target.extension 
+                              ? 'bg-primary border-primary text-white scale-[1.02] shadow-lg shadow-primary/20' 
+                              : 'bg-white/5 border-white/5 text-muted-foreground hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs truncate">{target.label}</p>
+                            <p className="text-[8px] text-muted-foreground truncate w-full group-hover:text-white mt-0.5">
+                              {target.description}
+                            </p>
+                          </div>
+                          <span className="font-mono font-bold text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-white shrink-0">
+                            .{target.extension}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Quality Slider */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
-                    <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
-                  </div>
-                  <Slider 
-                    value={[quality]} 
-                    onValueChange={(val) => setQuality(val[0])} 
-                    max={100} 
-                    min={10} 
-                    step={1}
-                    className="py-1"
-                  />
-                  <div className="flex justify-between text-[9px] text-muted-foreground font-semibold">
-                    <span>MAX COMPRESSION</span>
-                    <span>BALANCED</span>
-                    <span>LOSSLESS</span>
+                {/* SIDE-BY-SIDE: Quality Slider & Predicted Size Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-white/5 pt-4">
+                  
+                  {/* Column 1: Quality Slider */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
+                      <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
+                    </div>
+                    <Slider 
+                      value={[quality]} 
+                      onValueChange={(val) => setQuality(val[0])} 
+                      max={100} 
+                      min={10} 
+                      step={1}
+                      className="py-1"
+                    />
+                    <div className="flex justify-between text-[8px] text-muted-foreground font-semibold font-outfit">
+                      <span>MAX COMPRESS</span>
+                      <span>BALANCED</span>
+                      <span>LOSSLESS</span>
+                    </div>
                   </div>
 
-                  {/* Predicted Size Info Card */}
-                  <div className="bg-black/20 p-3.5 rounded-2xl border border-white/5 space-y-1.5 mt-2 animate-pulse-subtle">
+                  {/* Column 2: Predicted Size Info Card */}
+                  <div className="bg-black/25 p-3 rounded-2xl border border-white/5 flex flex-col justify-center space-y-1.5 animate-pulse-subtle">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Predicted File Size:</span>
+                      <span className="text-muted-foreground font-outfit">Predicted Size:</span>
                       <span className="font-extrabold text-cyan-400 font-mono">
                         {formatBytes(getPredictedSize())}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-muted-foreground">Estimated Ratio:</span>
+                      <span className="text-muted-foreground font-outfit">Estimated Ratio:</span>
                       <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
                         {getSavingsPercentage() >= 0 
                           ? `-${getSavingsPercentage()}% (Compressed)` 
@@ -784,22 +804,24 @@ export default function FileConverter() {
                       </span>
                     </div>
                   </div>
+
                 </div>
 
                 {/* Action Button */}
                 <Button 
                   onClick={startConversion}
                   disabled={isConverting}
-                  className="w-full h-12 rounded-2xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                  className="w-full h-11 rounded-2xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-2"
                 >
                   <RefreshCw className={`h-4 w-4 ${isConverting ? 'animate-spin' : ''}`} />
                   {isConverting ? 'Running Conversion...' : `Convert to ${targetFormat.toUpperCase()}`}
                 </Button>
+
               </div>
             </div>
 
-            {/* Right Panel: Processing logs and results */}
-            <div className="space-y-6">
+            {/* Right Panel: Processing logs and results (Takes 5 columns) */}
+            <div className="md:col-span-5 space-y-6">
               
               {/* Progress Console */}
               {(isConverting || logs.length > 0) && (
