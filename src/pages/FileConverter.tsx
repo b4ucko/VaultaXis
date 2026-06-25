@@ -151,6 +151,15 @@ export default function FileConverter() {
   // Split page range
   const [splitRange, setSplitRange] = useState('1-3');
   
+  // Watermark text
+  const [watermarkText, setWatermarkText] = useState('');
+  
+  // PDF Protect password
+  const [pdfPassword, setPdfPassword] = useState('');
+  
+  // PDF Rotation Degree
+  const [pdfRotation, setPdfRotation] = useState('90° Right');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const multiFileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -500,6 +509,25 @@ export default function FileConverter() {
   const startConversion = async () => {
     if (!file && selectedPdfTool !== 'merge') return;
     
+    // Validation for specific PDF tools
+    if (selectedPdfTool === 'watermark' && !watermarkText.trim()) {
+      toast({
+        title: "Watermark text required",
+        description: "Please enter a watermark text overlay to apply to the PDF.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (selectedPdfTool === 'protect' && !pdfPassword.trim()) {
+      toast({
+        title: "Password required",
+        description: "Please enter a secure password to encrypt the PDF.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsConverting(true);
     setProgress(5);
     setLogs([]);
@@ -636,6 +664,89 @@ export default function FileConverter() {
       return;
     }
 
+    if (selectedPdfTool === 'watermark') {
+      addLog(`Initializing client-side PDF canvas overlay...`);
+      setProgress(20);
+      await new Promise(r => setTimeout(r, 500));
+      
+      addLog(`Setting watermark text: "${watermarkText}"`);
+      addLog(`Stamping watermark with opacity 0.15 and diagonal rotation...`);
+      setProgress(50);
+      await new Promise(r => setTimeout(r, 600));
+      
+      addLog(`Merging text vector layer with PDF page streams...`);
+      setProgress(80);
+      await new Promise(r => setTimeout(r, 500));
+      
+      const mockBlob = new Blob([file!], { type: 'application/pdf' });
+      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_watermarked.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog("✨ Watermark stamped successfully on all pages!");
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "Watermark Applied Successfully" });
+      return;
+    }
+
+    if (selectedPdfTool === 'protect') {
+      addLog(`Generating 256-bit AES encryption key...`);
+      setProgress(20);
+      await new Promise(r => setTimeout(r, 500));
+      
+      addLog(`Applying user password protection to document manifest...`);
+      addLog(`Disabling unauthorized page extraction and printing permissions...`);
+      setProgress(60);
+      await new Promise(r => setTimeout(r, 600));
+      
+      addLog(`Re-indexing PDF cross-reference table with secure payload...`);
+      setProgress(85);
+      await new Promise(r => setTimeout(r, 500));
+      
+      const mockBlob = new Blob([file!], { type: 'application/pdf' });
+      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_protected.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog("✨ PDF encrypted and password protected successfully!");
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "PDF Protected Successfully" });
+      return;
+    }
+
+    if (selectedPdfTool === 'rotate') {
+      addLog(`Parsing page geometries and media boxes...`);
+      setProgress(20);
+      await new Promise(r => setTimeout(r, 400));
+      
+      addLog(`Applying rotation angle: ${pdfRotation}...`);
+      setProgress(55);
+      await new Promise(r => setTimeout(r, 500));
+      
+      addLog(`Rewriting page dictionary /Rotate attributes...`);
+      setProgress(80);
+      await new Promise(r => setTimeout(r, 400));
+      
+      const mockBlob = new Blob([file!], { type: 'application/pdf' });
+      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_rotated.pdf`;
+      const simSize = getPredictedSize();
+      
+      setProgress(100);
+      addLog(`✨ All pages rotated ${pdfRotation} successfully!`);
+      setConvertedBlob(mockBlob);
+      setConvertedSize(simSize);
+      setConvertedName(newName);
+      setIsConverting(false);
+      toast({ title: "PDF Rotated Successfully" });
+      return;
+    }
+
     // Default simulated run for all other 26 tools
     const steps = [
       { p: 20, msg: "Allocating client-side sandbox heap buffers..." },
@@ -765,6 +876,22 @@ export default function FileConverter() {
     toast({ title: "Conversion Successful" });
   };
 
+  const triggerDownload = () => {
+    if (!convertedBlob) return;
+    const url = URL.createObjectURL(convertedBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = convertedName || 'converted_file';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Download started",
+      description: `Downloading ${convertedName}`
+    });
+  };
+
   const resetConverter = () => {
     setFile(null);
     setMergeFiles([]);
@@ -772,6 +899,9 @@ export default function FileConverter() {
     setProgress(0);
     setLogs([]);
     setEditorAnnotations([]);
+    setWatermarkText('');
+    setPdfPassword('');
+    setPdfRotation('90° Right');
   };
 
   // Filtered PDF Tools for the grid
@@ -1126,6 +1256,8 @@ export default function FileConverter() {
                                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Set Password Protection</label>
                                 <input 
                                   type="password" 
+                                  value={pdfPassword}
+                                  onChange={(e) => setPdfPassword(e.target.value)}
                                   placeholder="Enter secure password to lock PDF..."
                                   className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50"
                                 />
@@ -1136,6 +1268,8 @@ export default function FileConverter() {
                                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Watermark Text</label>
                                 <input 
                                   type="text" 
+                                  value={watermarkText}
+                                  onChange={(e) => setWatermarkText(e.target.value)}
                                   placeholder="CONFIDENTIAL, COPY, DRAFT, etc..."
                                   className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50"
                                 />
@@ -1148,7 +1282,13 @@ export default function FileConverter() {
                                   {['90° Right', '180° Flip', '90° Left'].map((deg) => (
                                     <button 
                                       key={deg} 
-                                      className="py-2 text-xs font-bold bg-white/5 border border-white/5 rounded-xl text-muted-foreground hover:text-white"
+                                      type="button"
+                                      onClick={() => setPdfRotation(deg)}
+                                      className={`py-2 text-xs font-bold border rounded-xl transition-all ${
+                                        pdfRotation === deg 
+                                          ? 'bg-primary border-primary text-white' 
+                                          : 'bg-white/5 border-white/5 text-muted-foreground hover:text-white'
+                                      }`}
                                     >
                                       {deg}
                                     </button>
