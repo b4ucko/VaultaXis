@@ -76,26 +76,42 @@ export const isFileAllowed = (file: File): boolean => {
   const extension = file.name.split('.').pop()?.toLowerCase() || '';
   
   // Document types
-  const documentTypes = ['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'rtf', 'odt', 'csv', 'md', 'epub'];
+  const documentTypes = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'csv', 'tex', 'md', 'epub', 'mobi', 'xps'];
   
   // Image types
-  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'tiff', 'webp', 'ico', 'heic', 'psd'];
+  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'svg', 'heif', 'heic', 'raw', 'cr2', 'nef', 'arw', 'dng', 'psd', 'ai', 'eps', 'indd', 'webp', 'ico'];
   
   // Video types
-  const videoTypes = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', '3gp', 'ts', 'mpeg'];
+  const videoTypes = ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'mpg', 'mpeg', '3gp', 'webm', 'ogv', 'vob', 'swf', 'mts'];
   
   // Audio types
   const audioTypes = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'aiff', 'opus', 'mid'];
   
-  // Executable and archive types
-  const otherTypes = ['exe', 'apk', 'zip', 'rar', '7z', 'tar', 'gz', 'bat', 'sh', 'iso', 'encrypted'];
+  // Archive types
+  const archiveTypes = ['zip', 'rar', '7z', 'tar', 'gz', 'iso', 'dmg', 'cab', 'xz', 'bz2'];
+  
+  // Executable types
+  const executableTypes = ['exe', 'msi', 'app', 'apk', 'ipa', 'sh', 'bat', 'bin', 'cmd'];
+  
+  // System types
+  const systemTypes = ['dll', 'sys', 'cfg', 'ini', 'plist', 'reg', 'dat', 'pkg'];
+  
+  // Programming types
+  const programmingTypes = ['py', 'js', 'html', 'css', 'c', 'cpp', 'java', 'php', 'json', 'xml', 'yaml', 'yml', 'sql', 'r', 'm', 'pl', 'rb'];
+  
+  // Security types
+  const securityTypes = ['pem', 'pfx', 'key', 'csr', 'crt', 'asc', 'p12', 'encrypted'];
   
   const allowedTypes = [
     ...documentTypes,
     ...imageTypes,
     ...videoTypes,
     ...audioTypes,
-    ...otherTypes
+    ...archiveTypes,
+    ...executableTypes,
+    ...systemTypes,
+    ...programmingTypes,
+    ...securityTypes
   ];
   
   return allowedTypes.includes(extension);
