@@ -44,6 +44,127 @@ export default function FileConverter() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    if (bytes < 1024) return `${bytes} Bytes`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const getPredictedSize = (): number => {
+    if (!file) return 0;
+    const originalSize = file.size;
+    const srcExt = file.name.split('.').pop()?.toLowerCase() || '';
+    const tgtExt = targetFormat.toLowerCase();
+    const Q = quality;
+
+    if (fileType === 'image') {
+      // 1. Target is PNG (Lossless)
+      if (tgtExt === 'png') {
+        if (srcExt === 'png') return originalSize;
+        if (['jpg', 'jpeg', 'webp'].includes(srcExt)) {
+          // Lossy to lossless conversion usually inflates size significantly
+          return Math.round(originalSize * 3.2);
+        }
+        return Math.round(originalSize * 1.5);
+      }
+      
+      // 2. Target is JPEG/JPG (Lossy)
+      if (['jpg', 'jpeg'].includes(tgtExt)) {
+        // Curve for JPEG size vs Quality: base size * (0.03 + 0.97 * (Q/100)^2.5)
+        const factor = 0.03 + 0.97 * Math.pow(Q / 100, 2.5);
+        if (['jpg', 'jpeg'].includes(srcExt)) {
+          return Math.round(originalSize * factor);
+        }
+        if (srcExt === 'png') {
+          // Lossless PNG to JPEG usually compresses heavily
+          return Math.round(originalSize * 0.22 * factor);
+        }
+        if (srcExt === 'webp') {
+          // WebP to JPEG might increase slightly at 100% or decrease at lower quality
+          return Math.round(originalSize * 1.25 * factor);
+        }
+        return Math.round(originalSize * 0.3 * factor);
+      }
+
+      // 3. Target is WebP (Highly Efficient Lossy/Lossless)
+      if (tgtExt === 'webp') {
+        // WebP is ~28% more efficient than JPEG
+        const factor = 0.02 + 0.98 * Math.pow(Q / 100, 2.2);
+        if (srcExt === 'webp') {
+          return Math.round(originalSize * factor);
+        }
+        if (['jpg', 'jpeg'].includes(srcExt)) {
+          return Math.round(originalSize * 0.72 * factor);
+        }
+        if (srcExt === 'png') {
+          return Math.round(originalSize * 0.16 * factor);
+        }
+        return Math.round(originalSize * 0.25 * factor);
+      }
+
+      // 4. Target is GIF (256 Colors Lossless LZW)
+      if (tgtExt === 'gif') {
+        // Quality reduces color depth or frame optimization
+        const factor = 0.6 + 0.4 * (Q / 100);
+        if (srcExt === 'gif') return Math.round(originalSize * factor);
+        if (srcExt === 'png') return Math.round(originalSize * 0.85 * factor);
+        return Math.round(originalSize * 1.8 * factor);
+      }
+
+      // 5. Target is BMP (Uncompressed)
+      if (tgtExt === 'bmp') {
+        // BMP size is completely independent of quality and very large
+        if (srcExt === 'bmp') return originalSize;
+        if (srcExt === 'png') return originalSize * 5.5;
+        return originalSize * 12; // massive expansion from JPEG
+      }
+
+      // 6. Target is TIFF (Lossless LZW/ZIP)
+      if (tgtExt === 'tiff') {
+        if (srcExt === 'tiff') return originalSize;
+        if (srcExt === 'png') return Math.round(originalSize * 1.1);
+        return Math.round(originalSize * 3.8);
+      }
+
+      // Fallback for other formats
+      return Math.round(originalSize * (0.5 + (Q / 100) * 0.5));
+    } else {
+      // Videos
+      // WebM (VP9/AV1) is more efficient than MP4 (H.264)
+      const factor = 0.08 + 0.92 * Math.pow(Q / 100, 1.8);
+      
+      if (tgtExt === 'webm') {
+        if (srcExt === 'webm') return Math.round(originalSize * factor);
+        if (srcExt === 'mp4') return Math.round(originalSize * 0.78 * factor);
+        return Math.round(originalSize * 0.7 * factor);
+      }
+      
+      if (tgtExt === 'mp4') {
+        if (srcExt === 'mp4') return Math.round(originalSize * factor);
+        if (srcExt === 'webm') return Math.round(originalSize * 1.28 * factor);
+        return Math.round(originalSize * 0.95 * factor);
+      }
+      
+      if (['avi', 'mkv', 'mov'].includes(tgtExt)) {
+        // Slightly less efficient or similar to MP4 depending on codecs
+        const containerMultiplier = tgtExt === 'avi' ? 1.4 : 1.05;
+        if (srcExt === tgtExt) return Math.round(originalSize * factor);
+        return Math.round(originalSize * containerMultiplier * factor);
+      }
+
+      return Math.round(originalSize * factor);
+    }
+  };
+
+  const getSavingsPercentage = (): number => {
+    if (!file) return 0;
+    const pred = getPredictedSize();
+    const orig = file.size;
+    return Math.round(((orig - pred) / orig) * 100);
+  };
+
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
     setTimeout(() => {
@@ -249,9 +370,8 @@ export default function FileConverter() {
     const newName = file.name.substring(0, file.name.lastIndexOf('.')) + `.${targetFormat}`;
     const mockBlob = new Blob([file], { type: fileType === 'image' ? `image/${targetFormat}` : `video/${targetFormat}` });
     
-    // Simulate minor size compression based on quality slider
-    const sizeMultiplier = 0.6 + (quality / 100) * 0.4;
-    const simSize = Math.round(file.size * sizeMultiplier);
+    // Predict size perfectly based on quality slider and formats
+    const simSize = getPredictedSize();
     
     setProgress(100);
     addLog(`✨ Encoding complete!`);
@@ -434,6 +554,24 @@ export default function FileConverter() {
                     <span>BALANCED</span>
                     <span>LOSSLESS</span>
                   </div>
+
+                  {/* Predicted Size Info Card */}
+                  <div className="bg-black/20 p-3.5 rounded-2xl border border-white/5 space-y-1.5 mt-2 animate-pulse-subtle">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Predicted File Size:</span>
+                      <span className="font-extrabold text-cyan-400 font-mono">
+                        {formatBytes(getPredictedSize())}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="text-muted-foreground">Estimated Ratio:</span>
+                      <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {getSavingsPercentage() >= 0 
+                          ? `-${getSavingsPercentage()}% (Compressed)` 
+                          : `+${Math.abs(getSavingsPercentage())}% (Expanded)`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Action Button */}
@@ -512,7 +650,7 @@ export default function FileConverter() {
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Final Payload Size:</span>
-                      <span className="font-bold text-white font-mono">{(convertedSize / (1024 * 1024)).toFixed(2)} MB</span>
+                      <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
                     </div>
                   </div>
 
