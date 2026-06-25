@@ -19,6 +19,7 @@ import WebCryptoSpec from "./pages/WebCryptoSpec";
 import WebdavIntegration from "./pages/WebdavIntegration";
 import CloudSync from "./pages/CloudSync";
 import SupportedFormats from "./pages/SupportedFormats";
+import FileConverter from "./pages/FileConverter";
 import ScrollToTop from "@/components/ScrollToTop";
 
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/webdav" element={<WebdavIntegration />} />
             <Route path="/cloud-sync" element={<CloudSync />} />
             <Route path="/supported-formats" element={<SupportedFormats />} />
+            <Route path="/converter" element={<FileConverter />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
