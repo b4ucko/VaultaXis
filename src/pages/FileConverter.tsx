@@ -160,8 +160,13 @@ export default function FileConverter() {
   // PDF Rotation Degree
   const [pdfRotation, setPdfRotation] = useState('90° Right');
   
+  // Compare PDF files
+  const [compareFiles, setCompareFiles] = useState<File[]>([]);
+  const [compareUrls, setCompareUrls] = useState<string[]>([]);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const multiFileInputRef = useRef<HTMLInputElement>(null);
+  const compareFileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   // Reset file whenever tab changes
@@ -169,6 +174,17 @@ export default function FileConverter() {
     resetConverter();
     setSelectedPdfTool(null);
   }, [activeCategory]);
+
+  // Create object URLs for compare files
+  useEffect(() => {
+    const urls = compareFiles.map(f => URL.createObjectURL(f));
+    setCompareUrls(urls);
+    
+    // Revoke on change or unmount to free memory
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [compareFiles]);
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
@@ -192,6 +208,49 @@ export default function FileConverter() {
     toast({
       title: "Files added",
       description: `Added ${filesList.length} files to merge queue.`
+    });
+  };
+
+  const handleCompareFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const filesList = Array.from(e.target.files || []);
+    const pdfFiles = filesList.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    if (pdfFiles.length !== filesList.length) {
+      toast({
+        title: "Non-PDF files ignored",
+        description: "Only .PDF files can be used for comparison.",
+        variant: "destructive"
+      });
+    }
+    
+    if (pdfFiles.length === 0) return;
+    
+    setCompareFiles(prev => [...prev, ...pdfFiles]);
+    toast({
+      title: "PDFs loaded for comparison",
+      description: `Added ${pdfFiles.length} document${pdfFiles.length > 1 ? 's' : ''} to compare view.`
+    });
+  };
+
+  const handleCompareDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const filesList = Array.from(e.dataTransfer.files || []);
+    const pdfFiles = filesList.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    if (pdfFiles.length !== filesList.length) {
+      toast({
+        title: "Non-PDF files ignored",
+        description: "Only .PDF files can be used for comparison.",
+        variant: "destructive"
+      });
+    }
+    
+    if (pdfFiles.length === 0) return;
+    
+    setCompareFiles(prev => [...prev, ...pdfFiles]);
+    toast({
+      title: "PDFs loaded for comparison",
+      description: `Added ${pdfFiles.length} document${pdfFiles.length > 1 ? 's' : ''} to compare view.`
     });
   };
 
@@ -902,6 +961,7 @@ export default function FileConverter() {
     setWatermarkText('');
     setPdfPassword('');
     setPdfRotation('90° Right');
+    setCompareFiles([]);
   };
 
   // Filtered PDF Tools for the grid
@@ -1044,7 +1104,146 @@ export default function FileConverter() {
               </div>
             )}
 
-            {!file ? (
+            {selectedPdfTool === 'compare' ? (
+              /* Dedicated Compare PDF Workspace */
+              <div className="space-y-6 animate-scale-up">
+                {/* File Selection / Dropzone if empty */}
+                {compareFiles.length === 0 ? (
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDrop={handleCompareDrop}
+                    onClick={() => compareFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group hover:scale-[1.01]"
+                  >
+                    <input 
+                      type="file" 
+                      ref={compareFileInputRef} 
+                      onChange={handleCompareFilesChange} 
+                      accept=".pdf"
+                      multiple
+                      className="hidden" 
+                    />
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-max mx-auto group-hover:scale-110 transition-transform">
+                        <Upload className="h-8 w-8 text-primary" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="font-bold text-lg text-white">
+                          Drag & drop PDF files to compare
+                        </p>
+                        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                          Select 2 or more PDF documents to display and browse them side-by-side.
+                        </p>
+                      </div>
+                      <Button type="button" className="rounded-xl font-bold px-6">
+                        Select PDFs
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Active Comparison Workspace */
+                  <div className="space-y-6">
+                    {/* Top Control Bar */}
+                    <div className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <h3 className="font-bold text-sm text-white">Comparing {compareFiles.length} Document{compareFiles.length > 1 ? 's' : ''}</h3>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Browse, scroll, and inspect PDF versions side-by-side inside your browser sandbox.</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => compareFileInputRef.current?.click()}
+                          className="text-xs h-9 gap-1.5 rounded-xl border-white/10 hover:bg-white/5"
+                        >
+                          <Upload className="h-3.5 w-3.5" /> Add More PDFs
+                        </Button>
+                        <input 
+                          type="file" 
+                          ref={compareFileInputRef} 
+                          onChange={handleCompareFilesChange} 
+                          accept=".pdf"
+                          multiple
+                          className="hidden" 
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setCompareFiles([])}
+                          className="text-xs h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl"
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Compare Grid */}
+                    <div className={`grid grid-cols-1 ${compareFiles.length === 1 ? 'md:grid-cols-2' : compareFiles.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-6`}>
+                      {compareFiles.map((file, idx) => (
+                        <div key={idx} className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-4 shadow-xl flex flex-col animate-scale-up">
+                          {/* Card Header */}
+                          <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+                                <FileText className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-xs text-white truncate max-w-[120px] sm:max-w-[180px]" title={file.name}>
+                                  {file.name}
+                                </p>
+                                <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
+                                  {formatBytes(file.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setCompareFiles(prev => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-white/5 transition-colors"
+                              title="Remove file"
+                            >
+                              <span className="text-sm font-bold">×</span>
+                            </button>
+                          </div>
+
+                          {/* Embedded PDF Viewer */}
+                          {compareUrls[idx] ? (
+                            <iframe
+                              src={compareUrls[idx]}
+                              className="w-full h-[550px] rounded-2xl border border-white/10 bg-black/25 shadow-inner"
+                              title={file.name}
+                            />
+                          ) : (
+                            <div className="w-full h-[550px] rounded-2xl border border-white/10 bg-black/20 flex items-center justify-center text-xs text-muted-foreground">
+                              Loading PDF Preview...
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Prompt to add more if only 1 is uploaded */}
+                      {compareFiles.length === 1 && (
+                        <div 
+                          onClick={() => compareFileInputRef.current?.click()}
+                          className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-6 flex flex-col items-center justify-center text-center cursor-pointer min-h-[500px] transition-all duration-300 group hover:scale-[1.01]"
+                        >
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-muted-foreground group-hover:scale-110 transition-transform mb-4">
+                            <Upload className="h-6 w-6" />
+                          </div>
+                          <p className="font-bold text-sm text-white mb-1">Add another PDF to compare</p>
+                          <p className="text-xs text-muted-foreground max-w-[200px]">Select a second document to enable side-by-side browser inspection.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : !file ? (
               /* Dropzone */
               <div 
                 onDragOver={handleDragOver}
