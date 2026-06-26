@@ -36,7 +36,12 @@ import {
   FileImage,
   Eye,
   Scan,
-  Scissors
+  Scissors,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Plus,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -125,6 +130,9 @@ export default function FileConverter() {
   
   // Multiple files for Merge Tool
   const [mergeFiles, setMergeFiles] = useState<File[]>([]);
+  const [mergeStep, setMergeStep] = useState<number>(1);
+  const [previewFileIndex, setPreviewFileIndex] = useState<number>(0);
+  const [mergeUrls, setMergeUrls] = useState<string[]>([]);
   
   // Selected PDF Suite Tool
   const [selectedPdfTool, setSelectedPdfTool] = useState<string | null>(null);
@@ -186,6 +194,32 @@ export default function FileConverter() {
     };
   }, [compareFiles]);
 
+  // Create object URLs for merge files (preview)
+  useEffect(() => {
+    if (selectedPdfTool === 'merge') {
+      const urls = mergeFiles.map(f => URL.createObjectURL(f));
+      setMergeUrls(urls);
+      
+      return () => {
+        urls.forEach(url => URL.revokeObjectURL(url));
+      };
+    } else {
+      setMergeUrls([]);
+    }
+  }, [mergeFiles, selectedPdfTool]);
+
+  // Handle auto-return to Step 1 if files drop below 2 in Step 2
+  useEffect(() => {
+    if (selectedPdfTool === 'merge' && mergeStep === 2 && mergeFiles.length < 2) {
+      setMergeStep(1);
+      toast({
+        title: "Additional PDFs required",
+        description: "At least 2 PDF files are required to arrange and merge.",
+        variant: "destructive"
+      });
+    }
+  }, [mergeFiles, mergeStep, selectedPdfTool, toast]);
+
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
     setTimeout(() => {
@@ -201,15 +235,110 @@ export default function FileConverter() {
     setupConverterWithFile(selectedFile);
   };
 
-  const handleMultiFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMergeFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const filesList = Array.from(e.target.files || []);
-    if (filesList.length === 0) return;
-    setMergeFiles(prev => [...prev, ...filesList]);
-    toast({
-      title: "Files added",
-      description: `Added ${filesList.length} files to merge queue.`
+    const pdfFiles = filesList.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    if (pdfFiles.length !== filesList.length) {
+      toast({
+        title: "Non-PDF files ignored",
+        description: "Only .PDF files can be merged.",
+        variant: "destructive"
+      });
+    }
+    
+    if (pdfFiles.length === 0) return;
+    
+    setMergeFiles(prev => {
+      const combined = [...prev, ...pdfFiles];
+      if (combined.length > 10) {
+        toast({
+          title: "File limit reached",
+          description: "A maximum of 10 PDFs can be merged. Extra files were ignored.",
+          variant: "destructive"
+        });
+        return combined.slice(0, 10);
+      }
+      toast({
+        title: "Files added",
+        description: `Added ${pdfFiles.length} file(s) to merge queue.`
+      });
+      return combined;
     });
   };
+
+  const handleMergeDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const filesList = Array.from(e.dataTransfer.files || []);
+    const pdfFiles = filesList.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    
+    if (pdfFiles.length !== filesList.length) {
+      toast({
+        title: "Non-PDF files ignored",
+        description: "Only .PDF files can be merged.",
+        variant: "destructive"
+      });
+    }
+    
+    if (pdfFiles.length === 0) return;
+    
+    setMergeFiles(prev => {
+      const combined = [...prev, ...pdfFiles];
+      if (combined.length > 10) {
+        toast({
+          title: "File limit reached",
+          description: "A maximum of 10 PDFs can be merged. Extra files were ignored.",
+          variant: "destructive"
+        });
+        return combined.slice(0, 10);
+      }
+      toast({
+        title: "Files added",
+        description: `Added ${pdfFiles.length} file(s) to merge queue.`
+      });
+      return combined;
+    });
+  };
+
+  const moveMergeFile = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= mergeFiles.length) return;
+
+    setMergeFiles(prev => {
+      const newList = [...prev];
+      const temp = newList[index];
+      newList[index] = newList[targetIndex];
+      newList[targetIndex] = temp;
+      return newList;
+    });
+
+    if (previewFileIndex === index) {
+      setPreviewFileIndex(targetIndex);
+    } else if (previewFileIndex === targetIndex) {
+      setPreviewFileIndex(index);
+    }
+  };
+
+  const removeMergeFile = (index: number) => {
+    setMergeFiles(prev => {
+      const newList = prev.filter((_, i) => i !== index);
+      toast({
+        title: "File removed",
+        description: "File removed from the merge queue."
+      });
+      return newList;
+    });
+    setPreviewFileIndex(prev => {
+      if (prev === index) {
+        return Math.max(0, index - 1);
+      }
+      if (prev > index) {
+        return prev - 1;
+      }
+      return prev;
+    });
+  };
+
 
   const handleCompareFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const filesList = Array.from(e.target.files || []);
@@ -383,6 +512,10 @@ export default function FileConverter() {
   };
 
   const getPredictedSize = (): number => {
+    if (selectedPdfTool === 'merge') {
+      const totalSize = mergeFiles.reduce((acc, f) => acc + f.size, 0);
+      return Math.round(totalSize * 0.98);
+    }
     if (!file) return 0;
     const originalSize = file.size;
     const srcExt = file.name.split('.').pop()?.toLowerCase() || '';
@@ -398,10 +531,6 @@ export default function FileConverter() {
 
     if (selectedPdfTool) {
       if (selectedPdfTool === 'compress') return Math.round(originalSize * 0.45 * losslessFactor);
-      if (selectedPdfTool === 'merge') {
-        const totalSize = mergeFiles.reduce((acc, f) => acc + f.size, 0) + file.size;
-        return Math.round(totalSize * 0.95);
-      }
       if (selectedPdfTool === 'split') return Math.round(originalSize * 0.35 * losslessFactor);
       if (selectedPdfTool === 'edit' || selectedPdfTool === 'sign' || selectedPdfTool === 'watermark') return Math.round(originalSize * 1.08);
       return originalSize;
@@ -619,32 +748,63 @@ export default function FileConverter() {
   // Execute custom PDF tool logic
   const executePdfToolPipeline = async () => {
     if (selectedPdfTool === 'merge') {
-      addLog("Queuing multiple input document files...");
-      setProgress(20);
-      await new Promise(r => setTimeout(r, 600));
-      
-      addLog(`Total files to merge: ${mergeFiles.length + (file ? 1 : 0)}`);
-      setProgress(45);
-      
-      const filesNames = [file?.name, ...mergeFiles.map(f => f.name)].filter(Boolean);
-      addLog(`Merging order: ${filesNames.join(' ➔ ')}`);
-      setProgress(70);
-      await new Promise(r => setTimeout(r, 800));
-      
-      addLog("Stitching PDF pages and re-indexing cross-references...");
+      if (mergeFiles.length < 2) {
+        throw new Error("At least 2 PDF files are required to merge.");
+      }
+      addLog("Starting client-side PDF merge pipeline...");
+      setProgress(10);
+      await new Promise(r => setTimeout(r, 300));
+
+      addLog(`Loading pdf-lib engine...`);
+      const { PDFDocument } = await import('pdf-lib');
+      setProgress(25);
+
+      addLog(`Initializing new empty PDF document...`);
+      const mergedPdf = await PDFDocument.create();
+      setProgress(35);
+
+      let processedCount = 0;
+      for (let i = 0; i < mergeFiles.length; i++) {
+        const fileItem = mergeFiles[i];
+        addLog(`[${i + 1}/${mergeFiles.length}] Reading: ${fileItem.name} (${formatBytes(fileItem.size)})...`);
+        
+        try {
+          const arrayBuffer = await fileItem.arrayBuffer();
+          const pdfDoc = await PDFDocument.load(arrayBuffer);
+          
+          addLog(`[${i + 1}/${mergeFiles.length}] Copying pages from ${fileItem.name}...`);
+          const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+          
+          addLog(`[${i + 1}/${mergeFiles.length}] Appending ${copiedPages.length} pages to merged document...`);
+          copiedPages.forEach((page) => mergedPdf.addPage(page));
+          
+          processedCount++;
+          setProgress(Math.min(35 + Math.round((processedCount / mergeFiles.length) * 50), 85));
+        } catch (fileError) {
+          addLog(`❌ Error processing ${fileItem.name}: ${fileError instanceof Error ? fileError.message : 'Invalid PDF structure'}`);
+          throw new Error(`Failed to load or copy pages from "${fileItem.name}". Please ensure it is a valid, unencrypted PDF.`);
+        }
+      }
+
+      addLog("Compiling and optimizing merged PDF structure...");
       setProgress(90);
+      const pdfBytes = await mergedPdf.save();
       
-      const mockBlob = new Blob([file || ''], { type: 'application/pdf' });
+      const mergedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
       const newName = `merged_${Date.now()}.pdf`;
-      const simSize = getPredictedSize();
       
       setProgress(100);
-      addLog("✨ Document Merging complete!");
-      setConvertedBlob(mockBlob);
-      setConvertedSize(simSize);
+      addLog("✨ Document Merging complete! Merged PDF is ready.");
+      
+      setConvertedBlob(mergedBlob);
+      setConvertedSize(pdfBytes.length);
       setConvertedName(newName);
       setIsConverting(false);
-      toast({ title: "PDF Merged Successfully" });
+      
+      toast({ 
+        title: "PDF Merged Successfully",
+        description: `Combined ${mergeFiles.length} PDFs into a single file.`
+      });
       return;
     }
 
@@ -954,6 +1114,8 @@ export default function FileConverter() {
   const resetConverter = () => {
     setFile(null);
     setMergeFiles([]);
+    setMergeStep(1);
+    setPreviewFileIndex(0);
     setConvertedBlob(null);
     setProgress(0);
     setLogs([]);
@@ -1239,6 +1401,439 @@ export default function FileConverter() {
                           <p className="text-xs text-muted-foreground max-w-[200px]">Select a second document to enable side-by-side browser inspection.</p>
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : selectedPdfTool === 'merge' ? (
+              /* Dedicated Merge PDF Workspace */
+              <div className="space-y-6 animate-scale-up">
+                {/* Visual Stepper Progress Bar */}
+                <div className="flex items-center justify-between max-w-xl mx-auto mb-8 relative px-4">
+                  {/* Connection line */}
+                  <div className="absolute top-[15px] left-8 right-8 h-0.5 bg-white/5 z-0" />
+                  <div 
+                    className="absolute top-[15px] left-8 h-0.5 bg-gradient-to-r from-primary to-cyan-500 z-0 transition-all duration-500" 
+                    style={{ 
+                      width: mergeStep === 1 ? '0%' : mergeStep === 2 ? '50%' : '100%' 
+                    }}
+                  />
+
+                  {/* Step 1 */}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (!isConverting && !convertedBlob) {
+                        setMergeStep(1);
+                      }
+                    }}
+                    disabled={isConverting || !!convertedBlob}
+                    className="flex flex-col items-center z-10 focus:outline-none disabled:cursor-not-allowed group"
+                  >
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-300 ${
+                      mergeStep >= 1 
+                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30' 
+                        : 'bg-[#0b0f19] border-white/10 text-muted-foreground'
+                    } group-hover:scale-105`}>
+                      {mergeFiles.length >= 2 && mergeStep > 1 ? '✓' : '1'}
+                    </div>
+                    <span className={`text-[10px] font-bold mt-2 uppercase tracking-wider transition-colors ${
+                      mergeStep === 1 ? 'text-primary' : 'text-muted-foreground group-hover:text-white/80'
+                    }`}>1. Select PDFs</span>
+                  </button>
+
+                  {/* Step 2 */}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (!isConverting && !convertedBlob && mergeFiles.length >= 2) {
+                        setMergeStep(2);
+                      }
+                    }}
+                    disabled={isConverting || !!convertedBlob || mergeFiles.length < 2}
+                    className="flex flex-col items-center z-10 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed group"
+                  >
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-300 ${
+                      mergeStep >= 2 
+                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30' 
+                        : 'bg-[#0b0f19] border-white/10 text-muted-foreground'
+                    } group-hover:scale-105`}>
+                      {convertedBlob && mergeStep > 2 ? '✓' : '2'}
+                    </div>
+                    <span className={`text-[10px] font-bold mt-2 uppercase tracking-wider transition-colors ${
+                      mergeStep === 2 ? 'text-primary' : 'text-muted-foreground group-hover:text-white/80'
+                    }`}>2. Arrange & Preview</span>
+                  </button>
+
+                  {/* Step 3 */}
+                  <div 
+                    className="flex flex-col items-center z-10 opacity-100"
+                  >
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-300 ${
+                      mergeStep >= 3 
+                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30' 
+                        : 'bg-[#0b0f19] border-white/10 text-muted-foreground'
+                    }`}>
+                      3
+                    </div>
+                    <span className={`text-[10px] font-bold mt-2 uppercase tracking-wider transition-colors ${
+                      mergeStep === 3 ? 'text-primary' : 'text-muted-foreground'
+                    }`}>3. Merge & Download</span>
+                  </div>
+                </div>
+
+                {/* Step contents */}
+                {isConverting ? (
+                  /* Step 3: Processing Animation (Merging) */
+                  <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-6 shadow-2xl flex flex-col items-center justify-center text-center animate-fade-in min-h-[400px]">
+                    <div className="relative h-24 w-24 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                      <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
+                        <Layers3 className="h-8 w-8 text-primary animate-spin-slow" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-extrabold text-xl text-white">Merging Documents...</h3>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                        {logs[logs.length - 1] ? logs[logs.length - 1].replace(/\[.*\]\s*/, '') : 'Executing client-side PDF stitching...'}
+                      </p>
+                    </div>
+                    
+                    <div className="w-full max-w-md space-y-2">
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-bold font-mono text-muted-foreground">
+                        <span>PIPELINE PROGRESS</span>
+                        <span className="text-primary">{progress}%</span>
+                      </div>
+                    </div>
+
+                    {/* Console logs box */}
+                    <div className="w-full max-w-md bg-black/40 rounded-2xl border border-white/5 p-4 text-left font-mono text-[10px] text-emerald-400 h-40 overflow-y-auto space-y-1.5 scrollbar-thin">
+                      {logs.map((log, idx) => (
+                        <div key={idx} className="leading-relaxed break-all">{log}</div>
+                      ))}
+                    </div>
+                  </div>
+                ) : convertedBlob ? (
+                  /* Step 3: Success & Download */
+                  <div className="p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl space-y-6 shadow-2xl flex flex-col items-center justify-center text-center animate-scale-up min-h-[400px]">
+                    <div className="p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-lg shadow-emerald-500/5 animate-bounce-subtle">
+                      <CheckCircle className="h-12 w-12" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-extrabold text-2xl text-white">PDFs Merged Successfully</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Combined {mergeFiles.length} PDF documents into a single optimized document client-side.
+                      </p>
+                    </div>
+
+                    <div className="w-full max-w-md bg-black/25 p-4 rounded-2xl border border-white/5 space-y-2.5 text-left font-outfit">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Output File:</span>
+                        <span className="font-bold text-white font-mono truncate max-w-[240px]">{convertedName}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Combined Size:</span>
+                        <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Total Source Files:</span>
+                        <span className="font-bold text-white font-mono">{mergeFiles.length} PDFs</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                      <Button 
+                        onClick={triggerDownload}
+                        className="flex-1 h-12 rounded-2xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                      >
+                        <Download className="h-4 w-4" /> Download Merged PDF
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={resetConverter}
+                        className="flex-1 h-12 rounded-2xl font-bold border-white/10 hover:bg-white/5 text-xs text-muted-foreground hover:text-white"
+                      >
+                        Merge More Files
+                      </Button>
+                    </div>
+                  </div>
+                ) : mergeStep === 1 ? (
+                  /* Step 1: Upload PDFs Workspace */
+                  <div className="space-y-6 animate-fade-in">
+                    {/* Drag-and-drop area */}
+                    <div 
+                      onDragOver={handleDragOver}
+                      onDrop={handleMergeDrop}
+                      onClick={() => multiFileInputRef.current?.click()}
+                      className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-10 text-center cursor-pointer transition-all duration-300 group hover:scale-[1.01]"
+                    >
+                      <input 
+                        type="file" 
+                        ref={multiFileInputRef} 
+                        onChange={handleMergeFilesChange} 
+                        accept=".pdf"
+                        multiple
+                        className="hidden" 
+                      />
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-max mx-auto group-hover:scale-110 transition-transform">
+                          <Upload className="h-8 w-8 text-primary" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <p className="font-bold text-lg text-white">
+                            Drag & drop PDF files to merge
+                          </p>
+                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                            Upload between <span className="text-primary font-bold">2 to 10 PDF documents</span> to compile them together.
+                          </p>
+                        </div>
+                        <Button type="button" className="rounded-xl font-bold px-6">
+                          Select PDFs
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Current File Queue */}
+                    {mergeFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                          <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                            Selected PDFs ({mergeFiles.length}/10)
+                          </h3>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setMergeFiles([])}
+                            className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl px-3 h-8"
+                          >
+                            Clear All
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
+                          {mergeFiles.map((fileItem, idx) => (
+                            <div 
+                              key={idx} 
+                              className="p-3 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-md flex items-center justify-between gap-3 hover:border-white/10 transition-all animate-scale-up"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="h-6 w-6 rounded-md bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                                  {idx + 1}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-xs text-white truncate max-w-[140px] sm:max-w-[180px]" title={fileItem.name}>
+                                    {fileItem.name}
+                                  </p>
+                                  <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
+                                    {formatBytes(fileItem.size)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeMergeFile(idx)}
+                                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                                title="Remove File"
+                              >
+                                <span className="text-sm font-bold">×</span>
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 1 Actions */}
+                    <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-white">Next Step: Arrange & Preview</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {mergeFiles.length < 2 
+                            ? "Upload at least 2 PDF documents to proceed." 
+                            : `Ready! Click next to arrange the order of your ${mergeFiles.length} files.`}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setPreviewFileIndex(0);
+                          setMergeStep(2);
+                        }}
+                        disabled={mergeFiles.length < 2}
+                        className="h-11 px-6 rounded-xl font-bold bg-primary hover:bg-primary-hover text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                      >
+                        Next: Arrange & Preview <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Step 2: Arrange & Preview Workspace */
+                  <div className="space-y-6 animate-fade-in">
+                    {/* Control Banner */}
+                    <div className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                          <Sliders className="h-4 w-4 text-primary" />
+                          Arrange PDF Sequence
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground">Click on any document in the list to inspect it in the live browser preview.</p>
+                      </div>
+                      
+                      {mergeFiles.length < 10 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setMergeStep(1);
+                            // Settimeout to let step transition render before opening file input
+                            setTimeout(() => {
+                              multiFileInputRef.current?.click();
+                            }, 50);
+                          }}
+                          className="text-xs h-9 gap-1.5 rounded-xl border-white/10 hover:bg-white/5 sm:w-auto w-full"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Add More PDFs
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Side-by-side: Left list of files, Right live preview iframe */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                      {/* Left: Reordering list */}
+                      <div className="md:col-span-5 space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
+                        {mergeFiles.map((fileItem, idx) => (
+                          <div 
+                            key={idx}
+                            onClick={() => setPreviewFileIndex(idx)}
+                            className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer group/item relative ${
+                              previewFileIndex === idx 
+                                ? 'bg-primary/10 border-primary/40 shadow-md shadow-primary/5' 
+                                : 'bg-white/5 border-white/5 hover:border-white/15'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              {/* Row number / Preview badge */}
+                              <div className={`h-6.5 w-6.5 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 transition-colors ${
+                                previewFileIndex === idx 
+                                  ? 'bg-primary text-white' 
+                                  : 'bg-white/5 text-muted-foreground border border-white/10 group-hover/item:text-white'
+                              }`}>
+                                #{idx + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-xs text-white truncate max-w-[120px] sm:max-w-[160px]" title={fileItem.name}>
+                                  {fileItem.name}
+                                </p>
+                                <p className="text-[9px] text-muted-foreground font-mono mt-0.5">
+                                  {formatBytes(fileItem.size)}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Serialization & deletion controls */}
+                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              {/* Move Up */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => moveMergeFile(idx, 'up')}
+                                disabled={idx === 0}
+                                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 disabled:opacity-20"
+                                title="Move Up"
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              {/* Move Down */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => moveMergeFile(idx, 'down')}
+                                disabled={idx === mergeFiles.length - 1}
+                                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 disabled:opacity-20"
+                                title="Move Down"
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                              {/* Delete */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeMergeFile(idx)}
+                                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                                title="Remove File"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Right: PDF Viewer iframe */}
+                      <div className="md:col-span-7 flex flex-col">
+                        <div className="rounded-3xl border border-white/5 bg-white/5 p-2 shadow-2xl flex-1 flex flex-col h-[500px]">
+                          {mergeUrls[previewFileIndex] ? (
+                            <iframe
+                              src={mergeUrls[previewFileIndex]}
+                              className="w-full h-full rounded-2xl border border-white/5 bg-black/35 shadow-inner"
+                              title={`Preview: ${mergeFiles[previewFileIndex]?.name}`}
+                            />
+                          ) : (
+                            <div className="w-full h-full rounded-2xl border border-white/5 bg-black/20 flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
+                              <Eye className="h-8 w-8 text-muted-foreground/40 mb-3 animate-pulse" />
+                              <p className="font-bold text-sm text-white/80">No Preview Available</p>
+                              <p className="text-xs max-w-xs mt-1">Select a PDF file from the list to display it inside the website.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 2 Actions */}
+                    <div className="p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-center sm:text-left space-y-1">
+                        <p className="text-xs font-bold text-white">Arrange complete? Compile PDF package.</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Clicking merge will stitch all pages in sequence client-side.
+                        </p>
+                      </div>
+                      
+                      <div className="flex gap-3 w-full sm:w-auto">
+                        <Button 
+                          variant="outline"
+                          onClick={() => setMergeStep(1)}
+                          className="flex-1 sm:flex-none h-11 px-6 rounded-xl font-bold border-white/10 hover:bg-white/5 text-xs"
+                        >
+                          Back to Upload
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setMergeStep(3);
+                            // Call conversion inside setTimeout to ensure step change renders first
+                            setTimeout(() => {
+                              startConversion();
+                            }, 50);
+                          }}
+                          disabled={mergeFiles.length < 2 || isConverting}
+                          className="flex-1 sm:flex-none h-11 px-8 rounded-xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                        >
+                          <Layers3 className="h-4.5 w-4.5" />
+                          Merge PDFs Now
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
