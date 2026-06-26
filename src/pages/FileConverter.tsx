@@ -252,9 +252,9 @@ export default function FileConverter() {
     loadPageCount();
   }, [file, selectedPdfTool, toast]);
 
-  // Manage Object URL for Split PDF Tool live preview
+  // Manage Object URL for PDF Tools live preview
   useEffect(() => {
-    if (selectedPdfTool === 'split' && file) {
+    if (selectedPdfTool && selectedPdfTool !== 'merge' && selectedPdfTool !== 'compare' && file) {
       const url = URL.createObjectURL(file);
       setSplitFileUrl(url);
       
@@ -1247,7 +1247,7 @@ export default function FileConverter() {
       <Header />
       
       <div className={`container mx-auto py-12 px-6 flex-1 space-y-8 transition-all duration-300 ${
-        ['merge', 'split', 'compare'].includes(selectedPdfTool || '') ? 'max-w-6xl' : 'max-w-5xl'
+        selectedPdfTool ? 'max-w-6xl' : 'max-w-5xl'
       }`}>
         {/* Back Button */}
         <Button 
@@ -2258,6 +2258,389 @@ export default function FileConverter() {
                             <div className="w-full h-full rounded-2xl border border-white/5 bg-black/20 flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
                               <Eye className="h-8 w-8 text-muted-foreground/40 mb-3 animate-pulse" />
                               <p className="font-bold text-sm text-white/80">Loading PDF Preview...</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (selectedPdfTool && selectedPdfTool !== 'merge' && selectedPdfTool !== 'split' && selectedPdfTool !== 'compare') ? (
+              /* Dedicated Workspace for all other single-file PDF tools */
+              <div className="space-y-6 animate-scale-up">
+                {!file ? (
+                  /* Step 1: Upload PDF */
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group hover:scale-[1.01]"
+                  >
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange} 
+                      accept={
+                        ['jpg-to-pdf', 'word-to-pdf', 'powerpoint-to-pdf', 'excel-to-pdf', 'html-to-pdf'].includes(selectedPdfTool)
+                          ? '.jpg,.jpeg,.png,.docx,.pptx,.xlsx,.html'
+                          : '.pdf'
+                      }
+                      className="hidden" 
+                    />
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-max mx-auto group-hover:scale-110 transition-transform">
+                        <Upload className="h-8 w-8 text-primary" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="font-bold text-lg text-white">
+                          Drag & drop file to {PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name || 'process'}
+                        </p>
+                        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                          {['jpg-to-pdf', 'word-to-pdf', 'powerpoint-to-pdf', 'excel-to-pdf'].includes(selectedPdfTool)
+                            ? 'Supports Word, Excel, PowerPoint, and Image files.'
+                            : 'This tool operates entirely client-side on .PDF documents.'}
+                        </p>
+                      </div>
+                      <Button type="button" className="rounded-xl font-bold px-6">
+                        Select File
+                      </Button>
+                    </div>
+                  </div>
+                ) : isConverting ? (
+                  /* Step 2: Processing Animation (No logs, clean layout) */
+                  <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-8 shadow-2xl flex flex-col items-center justify-center text-center animate-fade-in min-h-[400px]">
+                    <div className="relative h-24 w-24 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                      <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
+                        {React.createElement(PDF_TOOLS.find(t => t.id === selectedPdfTool)?.icon || FileText, { className: 'h-8 w-8 text-primary animate-spin-slow' })}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h3 className="font-extrabold text-2xl text-white tracking-tight">
+                        {PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name || 'Processing Document'}
+                      </h3>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                        Please wait while your document is processed. This operation runs entirely client-side inside your browser sandbox.
+                      </p>
+                    </div>
+                    
+                    <div className="w-full max-w-xs space-y-2">
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] font-bold font-mono text-muted-foreground/75 uppercase tracking-wider">
+                        <span>Processing</span>
+                        <span className="text-primary">{progress}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : convertedBlob ? (
+                  /* Step 3: Success & Download */
+                  <div className="p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl space-y-6 shadow-2xl flex flex-col items-center justify-center text-center animate-scale-up min-h-[400px]">
+                    <div className="p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-lg shadow-emerald-500/5 animate-bounce-subtle">
+                      <CheckCircle className="h-12 w-12" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-extrabold text-2xl text-white">Action Successful</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Your document has been processed inside the client sandbox.
+                      </p>
+                    </div>
+
+                    <div className="w-full max-w-md bg-black/25 p-4 rounded-2xl border border-white/5 space-y-2.5 text-left font-outfit">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Output File:</span>
+                        <span className="font-bold text-white font-mono truncate max-w-[200px]">{convertedName}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">File Size:</span>
+                        <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Tool Applied:</span>
+                        <span className="font-bold text-primary uppercase font-mono">{PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                      <Button 
+                        onClick={triggerDownload}
+                        className="flex-1 h-12 rounded-2xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                      >
+                        <Download className="h-4 w-4" /> Download Processed File
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={resetConverter}
+                        className="flex-1 h-12 rounded-2xl font-bold border-white/10 hover:bg-white/5 text-xs text-muted-foreground hover:text-white"
+                      >
+                        Process Another File
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Step 2: Main Workspace Grid */
+                  <div className="space-y-6">
+                    {/* Control Banner */}
+                    <div className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                          {React.createElement(PDF_TOOLS.find(t => t.id === selectedPdfTool)?.icon || FileText, { className: 'h-4 w-4 text-primary' })}
+                          Configure {PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name}
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground">Adjust settings in the left panel and preview your document on the right.</p>
+                      </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={resetConverter}
+                        className="text-xs h-9 gap-1.5 rounded-xl border-white/10 hover:bg-white/5"
+                      >
+                        Change File
+                      </Button>
+                    </div>
+
+                    {/* Side-by-side view */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                      {/* Left: Configuration & Settings */}
+                      <div className="md:col-span-4 space-y-4 flex flex-col justify-between" style={{ minHeight: '700px' }}>
+                        
+                        {/* File Details Card */}
+                        <div className="p-4 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-md space-y-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <span className="font-bold text-xs text-white truncate max-w-[180px]" title={file.name}>
+                              {file.name}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                            <span>Size: {formatBytes(file.size)}</span>
+                            <span>Format: {file.name.split('.').pop()?.toUpperCase()}</span>
+                          </div>
+                        </div>
+
+                        {/* Tool-specific Configuration Card */}
+                        <div className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-4 flex-1 flex flex-col justify-center">
+                          
+                          {/* 1. SIGN PDF DIGITAL PAD */}
+                          {selectedPdfTool === 'sign' && (
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Draw Signature</label>
+                                <div className="flex items-center gap-2">
+                                  {['#00e5ff', '#a855f7', '#10b981', '#ffffff'].map((color) => (
+                                    <button 
+                                      key={color}
+                                      type="button"
+                                      onClick={() => setSigColor(color)}
+                                      className={`h-4.5 w-4.5 rounded-full border border-white/10 ${sigColor === color ? 'ring-2 ring-primary scale-110' : ''}`}
+                                      style={{ backgroundColor: color }}
+                                    />
+                                  ))}
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={clearSignature}
+                                    className="text-[9px] h-6 text-muted-foreground hover:text-white"
+                                  >
+                                    Clear
+                                  </Button>
+                                </div>
+                              </div>
+                              <canvas 
+                                ref={sigCanvasRef}
+                                width={320}
+                                height={150}
+                                onMouseDown={startDrawing}
+                                onMouseMove={draw}
+                                onMouseUp={stopDrawing}
+                                onMouseLeave={stopDrawing}
+                                className="w-full bg-black/40 rounded-2xl border border-white/10 cursor-crosshair h-[150px]"
+                              />
+                            </div>
+                          )}
+
+                          {/* 2. EDIT PDF ANNOTATIONS */}
+                          {selectedPdfTool === 'edit' && (
+                            <div className="space-y-3">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Text Annotation to Add</label>
+                              <div className="flex gap-2">
+                                <input 
+                                  type="text"
+                                  value={editorText}
+                                  onChange={(e) => setEditorText(e.target.value)}
+                                  placeholder="Type text to stamp on PDF..."
+                                  className="flex-1 bg-black/20 border border-white/5 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-primary/50 font-outfit"
+                                />
+                                <Button onClick={addAnnotation} className="h-9 rounded-xl text-xs">Stamp</Button>
+                              </div>
+                              {editorAnnotations.length > 0 && (
+                                <div className="bg-black/20 rounded-2xl border border-white/5 p-3 space-y-1.5 max-h-[150px] overflow-y-auto">
+                                  <div className="flex justify-between items-center border-b border-white/5 pb-1">
+                                    <span className="text-[9px] font-bold text-muted-foreground uppercase">Stamps Queue</span>
+                                    <button onClick={clearAnnotations} className="text-[8px] text-red-400 hover:underline">Clear All</button>
+                                  </div>
+                                  {editorAnnotations.map((anno, idx) => (
+                                    <div key={idx} className="text-[10px] text-emerald-400 font-mono">
+                                      ✓ Text: "{anno}"
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 3. PROTECT PDF PASSWORD */}
+                          {selectedPdfTool === 'protect' && (
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Set Password Protection</label>
+                              <input 
+                                type="password" 
+                                value={pdfPassword}
+                                onChange={(e) => setPdfPassword(e.target.value)}
+                                placeholder="Enter secure password to lock PDF..."
+                                className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50 font-outfit"
+                              />
+                            </div>
+                          )}
+
+                          {/* 4. WATERMARK PDF TEXT */}
+                          {selectedPdfTool === 'watermark' && (
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Watermark Text</label>
+                              <input 
+                                type="text" 
+                                value={watermarkText}
+                                onChange={(e) => setWatermarkText(e.target.value)}
+                                placeholder="CONFIDENTIAL, COPY, DRAFT, etc..."
+                                className="w-full bg-black/20 border border-white/5 p-3 rounded-2xl text-xs text-white focus:outline-none focus:border-primary/50 font-outfit"
+                              />
+                            </div>
+                          )}
+
+                          {/* 5. ROTATE PDF DEGREES */}
+                          {selectedPdfTool === 'rotate' && (
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rotation Degree</label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {['90° Right', '180° Flip', '90° Left'].map((deg) => (
+                                  <button 
+                                    key={deg} 
+                                    type="button"
+                                    onClick={() => setPdfRotation(deg)}
+                                    className={`py-2 text-xs font-bold border rounded-xl transition-all ${
+                                      pdfRotation === deg 
+                                        ? 'bg-primary border-primary text-white' 
+                                        : 'bg-white/5 border-white/5 text-muted-foreground hover:text-white'
+                                    }`}
+                                  >
+                                    {deg}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 6. COMPRESS PDF QUALITY SLIDER */}
+                          {selectedPdfTool === 'compress' && (
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Compression / Quality</label>
+                                  <span className="text-xs font-mono font-bold text-primary">{quality}%</span>
+                                </div>
+                                <Slider 
+                                  value={[quality]} 
+                                  onValueChange={(val) => setQuality(val[0])} 
+                                  max={100} 
+                                  min={10} 
+                                  step={1}
+                                  className="py-1"
+                                />
+                                <div className="flex justify-between text-[8px] text-muted-foreground font-semibold font-outfit">
+                                  <span>MAX COMPRESS</span>
+                                  <span>BALANCED</span>
+                                  <span>LOSSLESS</span>
+                                </div>
+                              </div>
+
+                              <div className="bg-black/25 p-3 rounded-2xl border border-white/5 flex flex-col justify-center space-y-1.5 animate-pulse-subtle">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-muted-foreground font-outfit">Predicted Size:</span>
+                                  <span className="font-extrabold text-cyan-400 font-mono">
+                                    {formatBytes(getPredictedSize())}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px]">
+                                  <span className="text-muted-foreground font-outfit">Estimated Ratio:</span>
+                                  <span className={`font-bold ${getSavingsPercentage() >= 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    {getSavingsPercentage() >= 0 
+                                      ? `-${getSavingsPercentage()}% (Compressed)` 
+                                      : `+${Math.abs(getSavingsPercentage())}% (Expanded)`}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Default: For all other tools, display a clean info layout */}
+                          {!['sign', 'edit', 'protect', 'watermark', 'rotate', 'compress'].includes(selectedPdfTool) && (
+                            <div className="p-4 rounded-2xl bg-black/20 border border-white/5 text-center space-y-2">
+                              <p className="font-bold text-xs text-white">No custom inputs required</p>
+                              <p className="text-[10px] text-muted-foreground leading-normal">This tool is pre-configured and runs automatically client-side when executed.</p>
+                            </div>
+                          )}
+
+                        </div>
+
+                        {/* Execute Button */}
+                        <Button
+                          onClick={() => {
+                            setIsConverting(true);
+                            setProgress(5);
+                            setTimeout(() => {
+                              startConversion();
+                            }, 50);
+                          }}
+                          disabled={isConverting}
+                          className="w-full h-12 rounded-2xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.01] transition-transform"
+                        >
+                          <RefreshCw className={`h-4.5 w-4.5 ${isConverting ? 'animate-spin' : ''}`} />
+                          Execute {PDF_TOOLS.find(t => t.id === selectedPdfTool)?.name}
+                        </Button>
+                      </div>
+
+                      {/* Right: PDF Viewer iframe */}
+                      <div className="md:col-span-8 flex flex-col" style={{ height: '700px' }}>
+                        <div className="rounded-3xl border border-white/5 bg-white/5 p-2 shadow-2xl flex-1 flex flex-col h-full">
+                          {splitFileUrl ? (
+                            file.name.toLowerCase().endsWith('.pdf') || ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'].includes(file.name.split('.').pop()?.toLowerCase() || '') ? (
+                              <iframe
+                                src={splitFileUrl}
+                                className="w-full h-full rounded-2xl border border-white/5 bg-black/35 shadow-inner"
+                                style={{ height: '100%' }}
+                                title="PDF Tool Preview"
+                              />
+                            ) : (
+                              <div className="w-full h-full rounded-2xl border border-white/5 bg-black/20 flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
+                                <FileText className="h-12 w-12 text-primary/40 mb-3 animate-pulse" />
+                                <p className="font-bold text-sm text-white/80">Preview pending conversion</p>
+                                <p className="text-xs max-w-xs mt-1">
+                                  This file format ({file.name.split('.').pop()?.toUpperCase()}) will be converted to a PDF document client-side when you click execute.
+                                </p>
+                              </div>
+                            )
+                          ) : (
+                            <div className="w-full h-full rounded-2xl border border-white/5 bg-black/20 flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
+                              <Eye className="h-8 w-8 text-muted-foreground/40 mb-3 animate-pulse" />
+                              <p className="font-bold text-sm text-white/80">Loading Preview...</p>
                             </div>
                           )}
                         </div>
