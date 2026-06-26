@@ -1708,7 +1708,7 @@ export default function FileConverter() {
                     {/* Side-by-side: Left list of files, Right live preview iframe */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                       {/* Left: Reordering list */}
-                      <div className="md:col-span-4 space-y-3 max-h-[720px] overflow-y-auto pr-1 scrollbar-thin">
+                      <div className="md:col-span-4 space-y-3 overflow-y-auto pr-1 scrollbar-thin" style={{ maxHeight: '700px' }}>
                         {mergeFiles.map((fileItem, idx) => (
                           <div 
                             key={idx}
@@ -1781,12 +1781,13 @@ export default function FileConverter() {
                       </div>
 
                       {/* Right: PDF Viewer iframe */}
-                      <div className="md:col-span-8 flex flex-col">
-                        <div className="rounded-3xl border border-white/5 bg-white/5 p-2 shadow-2xl flex-1 flex flex-col h-[720px]">
+                      <div className="md:col-span-8 flex flex-col" style={{ height: '700px' }}>
+                        <div className="rounded-3xl border border-white/5 bg-white/5 p-2 shadow-2xl flex-1 flex flex-col h-full">
                           {mergeUrls[previewFileIndex] ? (
                             <iframe
                               src={mergeUrls[previewFileIndex]}
                               className="w-full h-full rounded-2xl border border-white/5 bg-black/35 shadow-inner"
+                              style={{ height: '100%' }}
                               title={`Preview: ${mergeFiles[previewFileIndex]?.name}`}
                             />
                           ) : (
