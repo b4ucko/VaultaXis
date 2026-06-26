@@ -51,3 +51,9 @@ htmlcov/
 .cache/
 .vite
 .turbo
+
+# Agent artifacts
+implementation_plan.md
+task.md
+walkthrough.md
+
