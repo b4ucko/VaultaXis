@@ -1485,38 +1485,32 @@ export default function FileConverter() {
                 {/* Step contents */}
                 {isConverting ? (
                   /* Step 3: Processing Animation (Merging) */
-                  <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-6 shadow-2xl flex flex-col items-center justify-center text-center animate-fade-in min-h-[400px]">
+                  <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-8 shadow-2xl flex flex-col items-center justify-center text-center animate-fade-in min-h-[400px]">
                     <div className="relative h-24 w-24 flex items-center justify-center">
                       <div className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
                       <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
                         <Layers3 className="h-8 w-8 text-primary animate-spin-slow" />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <h3 className="font-extrabold text-xl text-white">Merging Documents...</h3>
+                    
+                    <div className="space-y-3">
+                      <h3 className="font-extrabold text-2xl text-white tracking-tight">Merging PDF Documents</h3>
                       <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                        {logs[logs.length - 1] ? logs[logs.length - 1].replace(/\[.*\]\s*/, '') : 'Executing client-side PDF stitching...'}
+                        Please wait while your files are compiled together. This process runs entirely client-side inside your browser sandbox.
                       </p>
                     </div>
                     
-                    <div className="w-full max-w-md space-y-2">
-                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="w-full max-w-xs space-y-2">
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-[10px] font-bold font-mono text-muted-foreground">
-                        <span>PIPELINE PROGRESS</span>
+                      <div className="flex justify-between text-[9px] font-bold font-mono text-muted-foreground/75 uppercase tracking-wider">
+                        <span>Processing</span>
                         <span className="text-primary">{progress}%</span>
                       </div>
-                    </div>
-
-                    {/* Console logs box */}
-                    <div className="w-full max-w-md bg-black/40 rounded-2xl border border-white/5 p-4 text-left font-mono text-[10px] text-emerald-400 h-40 overflow-y-auto space-y-1.5 scrollbar-thin">
-                      {logs.map((log, idx) => (
-                        <div key={idx} className="leading-relaxed break-all">{log}</div>
-                      ))}
                     </div>
                   </div>
                 ) : convertedBlob ? (
