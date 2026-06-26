@@ -1136,7 +1136,9 @@ export default function FileConverter() {
     <div className="flex flex-col min-h-screen bg-[#070b16] text-white font-outfit ambient-glow">
       <Header />
       
-      <div className="container max-w-5xl mx-auto py-12 px-6 flex-1 space-y-8">
+      <div className={`container mx-auto py-12 px-6 flex-1 space-y-8 transition-all duration-300 ${
+        selectedPdfTool === 'merge' ? 'max-w-6xl' : 'max-w-5xl'
+      }`}>
         {/* Back Button */}
         <Button 
           variant="ghost" 
@@ -1147,17 +1149,19 @@ export default function FileConverter() {
         </Button>
 
         {/* Title */}
-        <div className="space-y-3 border-b border-white/5 pb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
-            <RefreshCw className="h-3.5 w-3.5 animate-spin-slow" /> Client-Side Conversion & Document Suite
+        {selectedPdfTool !== 'merge' && (
+          <div className="space-y-3 border-b border-white/5 pb-6 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin-slow" /> Client-Side Conversion & Document Suite
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-cyan-400">
+              Format Converter
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Convert files completely inside your browser sandbox. WebAssembly & hardware-accelerated transcoding.
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-cyan-400">
-            Format Converter
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Convert files completely inside your browser sandbox. WebAssembly & hardware-accelerated transcoding.
-          </p>
-        </div>
+        )}
 
         {/* FILE CATEGORY TABS SELECTOR (Disabled if a specific PDF tool is active) */}
         {!selectedPdfTool && (
@@ -1242,7 +1246,7 @@ export default function FileConverter() {
         {(activeCategory !== 'document' || selectedPdfTool) && (
           <div className="animate-scale-up">
             {/* Slim Header for active PDF Tool */}
-            {selectedPdfTool && (
+            {selectedPdfTool && selectedPdfTool !== 'merge' && (
               <div className="flex items-center justify-between bg-white/5 border border-white/5 p-4 rounded-3xl mb-6">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary">
@@ -1704,7 +1708,7 @@ export default function FileConverter() {
                     {/* Side-by-side: Left list of files, Right live preview iframe */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                       {/* Left: Reordering list */}
-                      <div className="md:col-span-5 space-y-3 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
+                      <div className="md:col-span-4 space-y-3 max-h-[720px] overflow-y-auto pr-1 scrollbar-thin">
                         {mergeFiles.map((fileItem, idx) => (
                           <div 
                             key={idx}
@@ -1777,8 +1781,8 @@ export default function FileConverter() {
                       </div>
 
                       {/* Right: PDF Viewer iframe */}
-                      <div className="md:col-span-7 flex flex-col">
-                        <div className="rounded-3xl border border-white/5 bg-white/5 p-2 shadow-2xl flex-1 flex flex-col h-[500px]">
+                      <div className="md:col-span-8 flex flex-col">
+                        <div className="rounded-3xl border border-white/5 bg-white/5 p-2 shadow-2xl flex-1 flex flex-col h-[720px]">
                           {mergeUrls[previewFileIndex] ? (
                             <iframe
                               src={mergeUrls[previewFileIndex]}
