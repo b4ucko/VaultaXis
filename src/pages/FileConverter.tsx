@@ -41,7 +41,9 @@ import {
   ChevronDown,
   Trash2,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Copy,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -140,6 +142,9 @@ export default function FileConverter() {
   const [pdfPageCount, setPdfPageCount] = useState<number>(0);
   const [splitFileUrl, setSplitFileUrl] = useState<string>('');
   
+  // Organize PDF Tool
+  const [organizedPages, setOrganizedPages] = useState<number[]>([]);
+  
   // Selected PDF Suite Tool
   const [selectedPdfTool, setSelectedPdfTool] = useState<string | null>(null);
   const [pdfSearchQuery, setPdfSearchQuery] = useState('');
@@ -226,27 +231,33 @@ export default function FileConverter() {
     }
   }, [mergeFiles, mergeStep, selectedPdfTool, toast]);
 
-  // Detect PDF page count for the Split PDF Tool
+  // Detect PDF page count for the Split and Organize PDF Tools
   useEffect(() => {
     const loadPageCount = async () => {
-      if (selectedPdfTool === 'split' && file) {
+      if ((selectedPdfTool === 'split' || selectedPdfTool === 'organize') && file) {
         try {
           const { PDFDocument } = await import('pdf-lib');
           const arrayBuffer = await file.arrayBuffer();
           const pdfDoc = await PDFDocument.load(arrayBuffer);
-          setPdfPageCount(pdfDoc.getPageCount());
-          setSelectedPages([]); // Reset selections on file change
+          const count = pdfDoc.getPageCount();
+          setPdfPageCount(count);
+          if (selectedPdfTool === 'split') {
+            setSelectedPages([]); // Reset selections on file change
+          } else {
+            setOrganizedPages(Array.from({ length: count }, (_, i) => i + 1));
+          }
         } catch (e) {
           console.error("Failed to load PDF page count:", e);
           toast({
             title: "Error loading PDF",
-            description: "Could not read the PDF structure to extract pages.",
+            description: "Could not read the PDF structure.",
             variant: "destructive"
           });
         }
       } else {
         setPdfPageCount(0);
         setSelectedPages([]);
+        setOrganizedPages([]);
       }
     };
     loadPageCount();
@@ -854,6 +865,66 @@ export default function FileConverter() {
       return;
     }
 
+    if (selectedPdfTool === 'organize') {
+      if (!file) {
+        throw new Error("No PDF file uploaded to organize.");
+      }
+      if (organizedPages.length === 0) {
+        throw new Error("Please specify at least 1 page to generate the organized PDF.");
+      }
+
+      addLog("Starting client-side PDF organize pipeline...");
+      setProgress(15);
+      await new Promise(r => setTimeout(r, 200));
+
+      const { PDFDocument } = await import('pdf-lib');
+      setProgress(30);
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      setProgress(50);
+
+      addLog(`Creating new PDF document with organized page layout (${organizedPages.length} pages)...`);
+      const newPdf = await PDFDocument.create();
+
+      // copyPages takes 0-indexed page indexes
+      const pageIndices = organizedPages.map(p => p - 1);
+      
+      try {
+        addLog("Stitching and copying page structures...");
+        const copiedPages = await newPdf.copyPages(pdfDoc, pageIndices);
+        
+        copiedPages.forEach((page, idx) => {
+          newPdf.addPage(page);
+          setProgress(50 + Math.round((idx / copiedPages.length) * 35));
+        });
+      } catch (copyError) {
+        addLog(`❌ Page Copy Error: ${copyError instanceof Error ? copyError.message : 'Invalid page range'}`);
+        throw new Error("Failed to rearrange pages. Ensure pages are within valid document range.");
+      }
+
+      addLog("Compiling and saving reorganized PDF streams...");
+      setProgress(90);
+      const pdfBytes = await newPdf.save();
+      const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const cleanName = file.name.substring(0, file.name.lastIndexOf('.'));
+      const newName = `${cleanName}_organized.pdf`;
+      
+      setProgress(100);
+      addLog("✨ Document Organization complete! Organized PDF is ready.");
+      
+      setConvertedBlob(pdfBlob);
+      setConvertedSize(pdfBytes.length);
+      setConvertedName(newName);
+      setIsConverting(false);
+      
+      toast({
+        title: "PDF Organized Successfully",
+        description: `Successfully generated organized PDF with ${organizedPages.length} pages.`
+      });
+      return;
+    }
+
     if (selectedPdfTool === 'split') {
       if (!file) {
         throw new Error("No PDF file uploaded to split.");
@@ -1234,6 +1305,65 @@ export default function FileConverter() {
     setPdfPassword('');
     setPdfRotation('90° Right');
     setCompareFiles([]);
+    setOrganizedPages([]);
+  };
+
+  // Organize PDF page drag-drop and action helpers
+  const [draggedPageIdx, setDraggedPageIdx] = useState<number | null>(null);
+
+  const handlePageDragStart = (idx: number) => {
+    setDraggedPageIdx(idx);
+  };
+
+  const handlePageDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handlePageDrop = (idx: number) => {
+    if (draggedPageIdx === null) return;
+    setOrganizedPages(prev => {
+      const newList = [...prev];
+      const [draggedItem] = newList.splice(draggedPageIdx, 1);
+      newList.splice(idx, 0, draggedItem);
+      return newList;
+    });
+    setDraggedPageIdx(null);
+  };
+
+  const moveOrganizedPage = (idx: number, direction: 'left' | 'right') => {
+    const targetIdx = direction === 'left' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= organizedPages.length) return;
+    setOrganizedPages(prev => {
+      const newList = [...prev];
+      const temp = newList[idx];
+      newList[idx] = newList[targetIdx];
+      newList[targetIdx] = temp;
+      return newList;
+    });
+  };
+
+  const deleteOrganizedPage = (idx: number) => {
+    setOrganizedPages(prev => {
+      const newList = prev.filter((_, i) => i !== idx);
+      toast({
+        title: "Page removed",
+        description: `Page removed from the organization sequence.`
+      });
+      return newList;
+    });
+  };
+
+  const duplicateOrganizedPage = (idx: number) => {
+    setOrganizedPages(prev => {
+      const newList = [...prev];
+      const pageNum = newList[idx];
+      newList.splice(idx + 1, 0, pageNum);
+      toast({
+        title: "Page duplicated",
+        description: `Created a copy of Page ${pageNum}.`
+      });
+      return newList;
+    });
   };
 
   // Filtered PDF Tools for the grid
@@ -1942,6 +2072,334 @@ export default function FileConverter() {
                           <Layers3 className="h-4.5 w-4.5" />
                           Merge PDFs Now
                         </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : selectedPdfTool === 'organize' ? (
+              /* Dedicated Organize PDF Workspace */
+              <div className="space-y-6 animate-scale-up">
+                {!file ? (
+                  /* Step 1: Upload PDF */
+                  <div 
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/10 hover:border-primary/40 bg-white/5 backdrop-blur-xl rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group hover:scale-[1.01]"
+                  >
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange} 
+                      accept=".pdf"
+                      className="hidden" 
+                    />
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5 w-max mx-auto group-hover:scale-110 transition-transform">
+                        <Upload className="h-8 w-8 text-primary" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="font-bold text-lg text-white">
+                          Drag & drop PDF file to organize
+                        </p>
+                        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                          Upload <span className="text-primary font-bold">1 PDF document</span> to rearrange, duplicate, or delete pages.
+                        </p>
+                      </div>
+                      <Button type="button" className="rounded-xl font-bold px-6">
+                        Select PDF
+                      </Button>
+                    </div>
+                  </div>
+                ) : isConverting ? (
+                  /* Step 2: Processing Animation */
+                  <div className="p-8 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-8 shadow-2xl flex flex-col items-center justify-center text-center animate-fade-in min-h-[400px]">
+                    <div className="relative h-24 w-24 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                      <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse">
+                        <Grid className="h-8 w-8 text-primary animate-spin-slow" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h3 className="font-extrabold text-2xl text-white tracking-tight">Reorganizing PDF Pages</h3>
+                      <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                        Please wait while your PDF page order is rewritten. This process runs entirely client-side inside your browser sandbox.
+                      </p>
+                    </div>
+                    
+                    <div className="w-full max-w-xs space-y-2">
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-primary to-cyan-400 transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[9px] font-bold font-mono text-muted-foreground/75 uppercase tracking-wider">
+                        <span>Processing</span>
+                        <span className="text-primary">{progress}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : convertedBlob ? (
+                  /* Step 3: Success & Download */
+                  <div className="p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl space-y-6 shadow-2xl flex flex-col items-center justify-center text-center animate-scale-up min-h-[400px]">
+                    <div className="p-5 rounded-3xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 shadow-lg shadow-emerald-500/5 animate-bounce-subtle">
+                      <CheckCircle className="h-12 w-12" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-extrabold text-2xl text-white">PDF Reorganized Successfully</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Your page order layout has been compiled into a new PDF document client-side.
+                      </p>
+                    </div>
+
+                    <div className="w-full max-w-md bg-black/25 p-4 rounded-2xl border border-white/5 space-y-2.5 text-left font-outfit">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Output File:</span>
+                        <span className="font-bold text-white font-mono truncate max-w-[200px]">{convertedName}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">Total Output Pages:</span>
+                        <span className="font-bold text-white font-mono">{organizedPages.length} Pages</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-outfit">File Size:</span>
+                        <span className="font-bold text-white font-mono">{formatBytes(convertedSize)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+                      <Button 
+                        onClick={triggerDownload}
+                        className="flex-1 h-12 rounded-2xl font-bold bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                      >
+                        <Download className="h-4 w-4" /> Download Organized PDF
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={resetConverter}
+                        className="flex-1 h-12 rounded-2xl font-bold border-white/10 hover:bg-white/5 text-xs text-muted-foreground hover:text-white"
+                      >
+                        Organize Another PDF
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Step 2: Main Workspace */
+                  <div className="space-y-6">
+                    {/* Control Banner */}
+                    <div className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                          <Sliders className="h-4 w-4 text-primary" />
+                          Arrange PDF Pages
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground">Drag and drop pages to change sequence. Use arrows to shift, clone pages, or delete them.</p>
+                      </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={resetConverter}
+                        className="text-xs h-9 gap-1.5 rounded-xl border-white/10 hover:bg-white/5"
+                      >
+                        Change PDF File
+                      </Button>
+                    </div>
+
+                    {/* Side-by-side view */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                      {/* Left: Configuration & Settings */}
+                      <div className="md:col-span-4 space-y-4 flex flex-col justify-between" style={{ minHeight: '700px' }}>
+                        
+                        {/* File Details Card */}
+                        <div className="p-4 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-md space-y-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <span className="font-bold text-xs text-white truncate max-w-[180px]" title={file.name}>
+                              {file.name}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                            <span>Original Pages: {pdfPageCount}</span>
+                            <span>Target Pages: {organizedPages.length}</span>
+                          </div>
+                        </div>
+
+                        {/* Actions Configuration Card */}
+                        <div className="p-5 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-xl space-y-4 flex-1 flex flex-col justify-center">
+                          <div className="p-4 rounded-2xl bg-black/20 border border-white/5 text-center space-y-3">
+                            <p className="font-bold text-xs text-white">Organization Tools</p>
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setOrganizedPages(Array.from({ length: pdfPageCount }, (_, i) => i + 1));
+                                  toast({ title: "Reset complete", description: "Reverted back to original page layout." });
+                                }}
+                                className="text-[10px] h-8 rounded-xl border-white/10 hover:bg-white/5 flex items-center justify-center gap-1"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" /> Reset Order
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setOrganizedPages([]);
+                                  toast({ title: "Cleared pages", description: "All pages removed from compilation queue." });
+                                }}
+                                className="text-[10px] h-8 rounded-xl border-white/10 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              >
+                                Clear All
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Preview box wrapper */}
+                          <div className="space-y-1 flex-1 flex flex-col">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Original Document View</label>
+                            {splitFileUrl ? (
+                              <iframe
+                                src={splitFileUrl}
+                                className="w-full flex-1 rounded-2xl border border-white/10 bg-black/25 shadow-inner min-h-[300px]"
+                                title="Organize PDF Reference Frame"
+                              />
+                            ) : (
+                              <div className="w-full flex-1 rounded-2xl border border-white/10 bg-black/20 flex items-center justify-center text-xs text-muted-foreground min-h-[300px]">
+                                Preview Pending...
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Execute Button */}
+                        <Button
+                          onClick={() => {
+                            setIsConverting(true);
+                            setProgress(5);
+                            setTimeout(() => {
+                              startConversion();
+                            }, 50);
+                          }}
+                          disabled={organizedPages.length === 0 || isConverting}
+                          className="w-full h-12 rounded-2xl font-bold bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.01] transition-transform"
+                        >
+                          <Grid className="h-4.5 w-4.5" />
+                          Save Organized PDF Now ({organizedPages.length} Pages)
+                        </Button>
+                      </div>
+
+                      {/* Right: PDF Page Grid */}
+                      <div className="md:col-span-8 flex flex-col" style={{ height: '700px' }}>
+                        <div className="rounded-3xl border border-white/5 bg-white/5 p-4 shadow-2xl flex-1 flex flex-col h-full overflow-hidden">
+                          <div className="flex justify-between items-center border-b border-white/5 pb-3 mb-4">
+                            <h4 className="font-bold text-xs text-white uppercase tracking-wider">Interactive Layout Page Grid</h4>
+                            <span className="text-[10px] text-muted-foreground font-mono">Drag to sort sequence</span>
+                          </div>
+                          
+                          <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin">
+                            {organizedPages.length > 0 ? (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                {organizedPages.map((pageNum, idx) => {
+                                  const isDragged = draggedPageIdx === idx;
+                                  return (
+                                    <div
+                                      key={`${pageNum}-${idx}`}
+                                      draggable={!isConverting}
+                                      onDragStart={() => handlePageDragStart(idx)}
+                                      onDragOver={handlePageDragOver}
+                                      onDrop={() => handlePageDrop(idx)}
+                                      className={`p-4 rounded-2xl border flex flex-col items-center justify-between text-center relative cursor-grab transition-all duration-300 ${
+                                        isDragged
+                                          ? 'opacity-40 border-dashed border-primary bg-primary/5'
+                                          : 'bg-white/5 border-white/5 hover:border-primary/40 hover:bg-white/10 hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.03]'
+                                      }`}
+                                      style={{ height: '170px' }}
+                                    >
+                                      {/* Original page reference label */}
+                                      <div className="absolute top-2 left-2 right-2 flex justify-between items-center">
+                                        <span className="text-[8px] font-bold text-muted-foreground/75 uppercase font-mono">Orig. p. {pageNum}</span>
+                                        <span className="text-[8px] font-extrabold bg-primary/20 text-primary px-1.5 py-0.5 rounded-md font-mono">Pos. {idx + 1}</span>
+                                      </div>
+
+                                      {/* Large Visual Representation of Page */}
+                                      <div className="w-16 h-20 rounded-lg bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex flex-col items-center justify-center shadow-md select-none mt-4">
+                                        <FileText className="h-6 w-6 text-primary mb-1" />
+                                        <span className="text-lg font-extrabold text-white font-mono">{pageNum}</span>
+                                      </div>
+
+                                      {/* Controls Panel */}
+                                      <div className="w-full flex items-center justify-between gap-1 border-t border-white/5 pt-2.5 mt-2">
+                                        <div className="flex gap-0.5">
+                                          {/* Move Left */}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => moveOrganizedPage(idx, 'left')}
+                                            disabled={idx === 0}
+                                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:pointer-events-none"
+                                            title="Move Left"
+                                          >
+                                            <ArrowLeft className="h-3 w-3" />
+                                          </Button>
+                                          {/* Move Right */}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => moveOrganizedPage(idx, 'right')}
+                                            disabled={idx === organizedPages.length - 1}
+                                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:pointer-events-none"
+                                            title="Move Right"
+                                          >
+                                            <ArrowRight className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+
+                                        <div className="flex gap-0.5">
+                                          {/* Duplicate Page */}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => duplicateOrganizedPage(idx)}
+                                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10"
+                                            title="Clone Page"
+                                          >
+                                            <Copy className="h-3 w-3" />
+                                          </Button>
+                                          {/* Delete Page */}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => deleteOrganizedPage(idx)}
+                                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                                            title="Delete Page"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground animate-fade-in">
+                                <Trash2 className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                                <p className="font-bold text-sm text-white/80">All pages removed</p>
+                                <p className="text-xs max-w-xs mt-1">Please reset order or upload a new PDF document to begin compiling pages.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2822,7 +3280,7 @@ export default function FileConverter() {
                               <input 
                                 type="file" 
                                 ref={multiFileInputRef} 
-                                onChange={handleMultiFileChange} 
+                                onChange={handleMergeFilesChange} 
                                 accept=".pdf"
                                 multiple
                                 className="hidden" 
