@@ -1118,29 +1118,59 @@ export default function FileConverter() {
     }
 
     if (selectedPdfTool === 'rotate') {
-      addLog(`Parsing page geometries and media boxes...`);
-      setProgress(20);
-      await new Promise(r => setTimeout(r, 400));
-      
+      if (!file) {
+        throw new Error("No PDF file uploaded to rotate.");
+      }
+
+      addLog(`Loading pdf-lib engine...`);
+      setProgress(15);
+      await new Promise(r => setTimeout(r, 200));
+
+      const { PDFDocument, degrees } = await import('pdf-lib');
+      setProgress(30);
+
+      addLog(`Reading original PDF content...`);
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(arrayBuffer);
+      setProgress(50);
+
       addLog(`Applying rotation angle: ${pdfRotation}...`);
-      setProgress(55);
-      await new Promise(r => setTimeout(r, 500));
-      
-      addLog(`Rewriting page dictionary /Rotate attributes...`);
-      setProgress(80);
-      await new Promise(r => setTimeout(r, 400));
-      
-      const mockBlob = new Blob([file!], { type: 'application/pdf' });
-      const newName = `${file!.name.substring(0, file!.name.lastIndexOf('.'))}_rotated.pdf`;
-      const simSize = getPredictedSize();
-      
+      let rotationAngle = 0;
+      if (pdfRotation === '90° Right') {
+        rotationAngle = 90;
+      } else if (pdfRotation === '180° Flip') {
+        rotationAngle = 180;
+      } else if (pdfRotation === '90° Left') {
+        rotationAngle = 270;
+      }
+
+      const pages = pdfDoc.getPages();
+      addLog(`Processing ${pages.length} pages...`);
+
+      pages.forEach((page, index) => {
+        const currentRotation = page.getRotation().angle || 0;
+        const newRotation = (currentRotation + rotationAngle) % 360;
+        page.setRotation(degrees(newRotation));
+        setProgress(50 + Math.round(((index + 1) / pages.length) * 35));
+      });
+
+      addLog(`Saving rotated PDF content...`);
+      const pdfBytes = await pdfDoc.save();
+      const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const cleanName = file.name.substring(0, file.name.lastIndexOf('.'));
+      const newName = `${cleanName}_rotated.pdf`;
+
       setProgress(100);
       addLog(`✨ All pages rotated ${pdfRotation} successfully!`);
-      setConvertedBlob(mockBlob);
-      setConvertedSize(simSize);
+      setConvertedBlob(pdfBlob);
+      setConvertedSize(pdfBytes.length);
       setConvertedName(newName);
       setIsConverting(false);
-      toast({ title: "PDF Rotated Successfully" });
+      
+      toast({ 
+        title: "PDF Rotated Successfully",
+        description: `Rotated ${pages.length} pages by ${pdfRotation}.`
+      });
       return;
     }
 
